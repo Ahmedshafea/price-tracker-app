@@ -1,4 +1,7 @@
+// في ملف src/lib/extractors.ts
+"use server";
 import "server-only";
+
 import { Page } from 'puppeteer';
 
 // دالة مخصصة لاستخلاص السعر فقط
@@ -13,7 +16,6 @@ export async function extractPrice(page: Page): Promise<{ price: number | null; 
     "meta[name='price']",
     "meta[property='og:price:amount']",
   ];
-
   for (const selector of metaAndJsonPriceSelectors) {
     try {
       const priceValue = await page.$eval(selector, (el: Element) => (el as HTMLMetaElement).content);
@@ -68,7 +70,6 @@ export async function extractPrice(page: Page): Promise<{ price: number | null; 
     ".a-button-text .a-text-price",
     "[class*='Price']:not([class*='Old']):not([class*='Strike']):not([class*='Original']):not([class*='sale']):not([class*='discount'])",
   ];
-
   for (const selector of priceSelectors) {
     try {
       const elements = await page.$$(selector);
@@ -94,12 +95,10 @@ export async function extractPrice(page: Page): Promise<{ price: number | null; 
     }
     return false;
   });
-
   if (isOutOfStock) {
     console.log("⚠️ المنتج غير متوفر.");
     return { price: null, originalText: "المنتج غير متوفر" };
   }
-
   console.log("❌ لم يتم العثور على أي سعر");
   return { price: null, originalText: null };
 }
@@ -113,7 +112,6 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
       return { currency };
     }
   } catch {}
-
   try {
     const currency = await page.$eval("meta[itemprop='priceCurrency']", (el: Element) => (el as HTMLMetaElement).content);
     if (currency) {
@@ -121,7 +119,6 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
       return { currency };
     }
   } catch {}
-
   console.log("🔍 البحث عن العملة في JSON-LD...");
   try {
     const currency = await page.evaluate(() => {
@@ -177,9 +174,7 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
     'INR': 'INR', 'روبية هندية': 'INR',
     'RUB': 'RUB', 'روبل روسي': 'RUB'
   };
-
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
   const priceSelectors = [
     ".a-price .a-offscreen",
     ".a-price-current .a-price-fraction",
@@ -201,7 +196,6 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
     ".amount",
     "h2, h3, h4, h5, h6, span, p, a",
   ];
-
   for (const selector of priceSelectors) {
     try {
       const elements = await page.$$(selector);
@@ -222,18 +216,15 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
       }
     } catch {}
   }
-
   console.log("⚠️ لم يتم العثور على عملة في البيانات المهيكلة أو CSS، جارٍ البحث في نص الصفحة...");
   const pageText: string = await page.evaluate(() => document.body.innerText || "");
   const allText = pageText.toLowerCase();
-
   for (const [key, value] of Object.entries(currencyMap)) {
     if (allText.includes(key.toLowerCase())) {
       console.log(`✅ وجدت العملة في نص الصفحة: ${value}`);
       return { currency: value };
     }
   }
-
   console.log("❌ لم يتم العثور على أي عملة");
   return { currency: null };
 }
@@ -241,7 +232,6 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
 export function parsePrice(priceText: string): { price: number | null; originalText: string } {
   if (!priceText || typeof priceText !== 'string')
     return { price: null, originalText: priceText as string };
-
   const cleanText = priceText.toString().trim()
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\s+/g, ' ')
@@ -249,23 +239,19 @@ export function parsePrice(priceText: string): { price: number | null; originalT
     .replace(/٫/g, '.')
     .replace(/٠/g, '0').replace(/١/g, '1').replace(/٢/g, '2').replace(/٣/g, '3').replace(/٤/g, '4')
     .replace(/٥/g, '5').replace(/٦/g, '6').replace(/٧/g, '7').replace(/٨/g, '8').replace(/٩/g, '9');
-
   console.log(`🔍 تحليل النص: "${cleanText}"`);
   const priceMatch = cleanText.match(/(\d[\d,.]*)/);
   if (!priceMatch) {
     console.log("❌ لم يتم العثور على أي رقم للسعر");
     return { price: null, originalText: cleanText };
   }
-
   const priceStr = priceMatch[1];
   const normalized = priceStr.replace(/,/g, '');
   const priceNumber = parseFloat(normalized);
-
   if (isNaN(priceNumber) || priceNumber < 0.01 || priceNumber > 100000000) {
     console.log(`❌ رقم غير صحيح: ${priceNumber}`);
     return { price: null, originalText: cleanText };
   }
-
   const result = { price: priceNumber, originalText: cleanText };
   console.log(`✅ نتيجة تحليل السعر النهائية:`, result);
   return result;
@@ -293,43 +279,28 @@ export function isValidPrice(priceText: string): boolean {
   return true;
 }
 
-export function normalizeCurrency(currency: string): string {
-    const currencyMap: Record<string, string> = {
-        'د.ع': 'IQD', 'دينار عراقي': 'IQD', 'دينار': 'IQD', 'Iraqi Dinar': 'IQD',
-        'ج.م': 'EGP', 'جنيه': 'EGP', 'جنيه مصري': 'EGP', 'EGP': 'EGP',
-        'ر.س': 'SAR', 'ريال': 'SAR', 'ريال سعودي': 'SAR', 'SAR': 'SAR',
-        'د.إ': 'AED', 'درهم': 'AED', 'درهم إماراتي': 'AED', 'AED': 'AED',
-        'د.ك': 'KWD', 'دينار كويتي': 'KWD', 'KWD': 'KWD',
-        'ر.ق': 'QAR', 'ريال قطري': 'QAR', 'QAR': 'QAR',
-        'ر.ع': 'OMR', 'ريال عماني': 'OMR', 'OMR': 'OMR',
-        'د.ب': 'BHD', 'دينار بحريني': 'BHD', 'BHD': 'BHD',
-        'ج.س': 'SDG', 'جنيه سوداني': 'SDG', 'SDG': 'SDG',
-        'د.ل': 'LYD', 'دينار ليبي': 'LYD', 'LYD': 'LYD',
-        'د.أ': 'JOD', 'دينار أردني': 'JOD', 'JOD': 'JOD',
-        'ل.ل': 'LBP', 'ليرة لبنانية': 'LBP', 'LBP': 'LBP',
-        'د.ت': 'TND', 'دينار تونسي': 'TND', 'TND': 'TND',
-        'د.ج': 'DZD', 'دينار جزائري': 'DZD', 'DZD': 'DZD',
-        'د.م': 'MAD', 'درهم مغربي': 'MAD', 'MAD': 'MAD',
-        'ر.ي': 'YER', 'ريال يمني': 'YER', 'YER': 'YER',
-        'ل.س': 'SYP', 'ليرة سورية': 'SYP', 'SYP': 'SYP',
-        'ش.ص': 'SOS', 'شلن صومالي': 'SOS', 'SOS': 'SOS',
-        'ج.ق': 'DJF', 'فرنك جيبوتي': 'DJF', 'DJF': 'DJF',
-        'ك.ج': 'KMF', 'فرنك قمري': 'KMF', 'KMF': 'KMF',
-        'م.أ': 'MRU', 'أوقية موريتانية': 'MRU', 'MRU': 'MRU',
-        '$': 'USD', 'دولار أمريكي': 'USD', 'دولار': 'USD', 'USD': 'USD', 'Dollar': 'USD',
-        '€': 'EUR', 'يورو': 'EUR', 'EUR': 'EUR', 'Euro': 'EUR',
-        '£': 'GBP', 'جنيه استرليني': 'GBP', 'GBP': 'GBP',
-        '¥': 'JPY', 'ين ياباني': 'JPY', 'JPY': 'JPY',
-        'CHF': 'CHF', 'فرنك سويسري': 'CHF',
-        'AUD': 'AUD', 'دولار أسترالي': 'AUD',
-        'CAD': 'CAD', 'دولار كندي': 'CAD', 'C$': 'CAD',
-        '₩': 'KRW', 'وُن كوري': 'KRW', 'KRW': 'KRW',
-        'CNY': 'CNY', 'يوان صيني': 'CNY', 'RMB': 'CNY',
-        'INR': 'INR', 'روبية هندية': 'INR',
-        'RUB': 'RUB', 'روبل روسي': 'RUB'
-    };
-
-    const normalized = currencyMap[currency.toLowerCase().trim()] || currency.toUpperCase().trim();
-    
-    return normalized;
+// ⚠️ تم تصحيح هذا الجزء من الكود
+export async function extractImage(page: Page): Promise<{ image: string | null }> {
+  console.log("🖼️ جارٍ استخراج صورة المنتج...");
+  const imageSelectors = [
+    "meta[property='og:image']",
+    "meta[itemprop='image']",
+    "meta[name='twitter:image']",
+    ".product-image",
+    ".main-image",
+    "#img-main",
+    "[id*='image' i]",
+    "[class*='image' i]",
+  ];
+  for (const selector of imageSelectors) {
+    try {
+      const imageUrl = await page.$eval(selector, (el: Element) => (el as HTMLImageElement).src || (el as HTMLMetaElement).content);
+      if (imageUrl) {
+        console.log(`✅ وجدت الصورة في ${selector}: ${imageUrl}`);
+        return { image: imageUrl };
+      }
+    } catch {}
+  }
+  console.log("❌ لم يتم العثور على أي صورة");
+  return { image: null };
 }
