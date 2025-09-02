@@ -15,15 +15,10 @@ type Competitor = {
 };
 
 type Props = {
-  productId: string; // kept for potential client actions (not used here)
   competitors: Competitor[];
 };
 
-// Prefix param to silence unused-var warning if it's not referenced yet
-export default function CompetitorsTable({
-  productId: _productId,
-  competitors,
-}: Props) {
+export default function CompetitorsTable({ competitors }: Props) {
   const router = useRouter();
   const competitorsWithPrices = competitors.filter(c => c.currentPrice !== null);
 

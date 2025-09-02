@@ -2,7 +2,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { addCompetitorAction, trackCompetitorAction, updateProductCostAction } from "@/actions/product-actions";
+import { updateProductCostAction } from "@/actions/product-actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Save, TrendingUp, Package, DollarSign, BarChart3 } from "lucide-react";
@@ -89,12 +89,9 @@ export default async function ProductPage({ params }: { params: { productId: str
   const highestPrice = sanitizedProduct.competitors.reduce((max, c) => c.currentPrice !== null && c.currentPrice > max ? c.currentPrice : max, -Infinity);
   const recommendedPrice = sanitizedProduct.strategies[0]?.recommendedPrice;
 
-  // Do not bind server action functions and pass them into Client components.
-  // Pass only serializable props (productId / competitors) and use <form action={...}> or client fetch for interactivity.
-  // If you need a server action bound here, render the form in this Server Component instead.
-  const handleAddCompetitor = undefined;
-  const handleTrackCompetitor = undefined;
-  const handleUpdateCost = undefined;
+  // Do not pass server function values into Client Components. Use forms/actions or client fetch instead.
+  // Keep updateProductCostAction for the server-side <form action={...}> usage below.
+  const handleUpdateCost = undefined; // intentionally unused here
   
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -213,8 +210,8 @@ export default async function ProductPage({ params }: { params: { productId: str
       <CompetitorsSection 
         productId={product.id} 
         competitors={sanitizedProduct.competitors} 
-        handleAddCompetitor={handleAddCompetitor} // ⚠️ تم تمرير الدالة
-        handleTrackCompetitor={handleTrackCompetitor} // ⚠️ تم تمرير الدالة
+        handleAddCompetitor={undefined} // ⚠️ تم تمرير الدالة
+        handleTrackCompetitor={undefined} // ⚠️ تم تمرير الدالة
       />
       
       {/* Strategy Section */}

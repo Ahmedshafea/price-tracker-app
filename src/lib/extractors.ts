@@ -377,24 +377,41 @@ export function normalizeCurrency(currency: string): string {
     return normalized;
 }
 
-// دالة لاستخراج السعر من نص عادي
+/**
+ * Lightweight, strongly-typed helpers to extract numeric price from arbitrary text.
+ * These implementations are intentionally conservative and avoid any / reassignable vars.
+ */
 export function extractPriceFromText(original: unknown): number | null {
-  const originalText = String(original ?? "");
-  let extractedPrice: number | null = null;
+  const text = String(original ?? "");
+  // common price fragments like "1,234.56" or "1.234,56" — we prioritize dot-as-decimal
+  const m = text.match(/((\d{1,3}(?:[.,]\d{3})+)|\d+)([.,]\d+)?/);
+  if (!m) return null;
+  const raw = m[0];
+  // normalize thousands separators and decimal marker: if both dot and comma exist, assume comma thousands
+  const normalized = raw.includes(",") && raw.includes(".")
+    ? raw.replace(/,/g, "")
+    : raw.replace(/,/g, ".");
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+}
 
-  // محاولة استخدام التعبيرات العادية لاستخراج السعر
-  try {
-    // نمط بسيط لاستخراج الأرقام مع الفواصل
-    const regex = /(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/;
-    const match = originalText.match(regex);
-    if (match && match[1]) {
-      let priceStr: string = match[1].replace(/,/g, ''); // إزالة الفواصل
-      let priceNumber = Number(priceStr);
-      return Number.isFinite(priceNumber) ? priceNumber : null;
-    }
-  } catch (e) {
-    console.log("خطأ في استخراج السعر من النص:", e);
-  }
+/**
+ * Extract plain text from a DOM selector safely (server-safe no-op if DOM not present)
+ */
+export function extractTextFromSelector(selector: string, container?: Document | null): string | null {
+  if (typeof document === "undefined" && !container) return null;
+  const doc = container ?? document;
+  const el = doc.querySelector(selector);
+  return el ? (el.textContent ?? "").trim() : null;
+}
 
-  return null;
+/**
+ * Normalize a price string to a number (strips currency symbols)
+ */
+export function parsePriceString(priceStr: string): number | null {
+  const cleaned = priceStr.replace(/[^\d.,-]/g, "").trim();
+  if (!cleaned) return null;
+  const replaced = cleaned.includes(",") && !cleaned.includes(".") ? cleaned.replace(/\./g, "") : cleaned.replace(/,/g, "");
+  const v = Number(replaced);
+  return Number.isFinite(v) ? v : null;
 }

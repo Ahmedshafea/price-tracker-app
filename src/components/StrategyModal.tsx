@@ -2,11 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, X } from "lucide-react";
 import type { ReactElement } from "react";
 
 type Strategy = { id: string; name: string; type: string; config?: string };
@@ -27,8 +22,10 @@ export default function StrategyModal({
 }: {
   productId: string;
   initialStrategies: Strategy[];
-  // support either (productId, payload) or (payload) signatures — typed loosely with unknown for safety
-  addStrategyAction: ((productId: string, payload: AddStrategyPayload) => Promise<any>) | ((payload: AddStrategyPayload) => Promise<any>);
+  // allow either signature: (productId, payload) or (payload)
+  addStrategyAction:
+    | ((productId: string, payload: AddStrategyPayload) => Promise<{ success?: boolean; error?: string } | void>)
+    | ((payload: AddStrategyPayload) => Promise<{ success?: boolean; error?: string } | void>);
 }): ReactElement {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);

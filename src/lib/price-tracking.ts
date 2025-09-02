@@ -5,15 +5,13 @@ import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
 import { normalizeCurrency } from './extractors';
 import type { PriceData } from "./types";
-import type { Decimal } from "@prisma/client/runtime"; // used only for runtime narrowing
-
-// واجهات البيانات
-interface PriceData {
-  price?: number;
-  stockStatus?: string;
-  name?: string;
-  image?: string;
-  currency?: string;
+// helper to convert Prisma Decimal-like values to number
+function toNumber(val: unknown): number | null {
+  if (val === null || val === undefined) return null;
+  // @ts-ignore runtime check for Prisma Decimal
+  if (typeof (val as any)?.toNumber === "function") return (val as any).toNumber();
+  const n = Number(val as unknown as number);
+  return Number.isFinite(n) ? n : null;
 }
 
 export class PriceTrackingService {
@@ -201,12 +199,7 @@ export class PriceTrackingService {
 
     const competitorsWithPrices = productData.competitors
       .filter((c) => c.currentPrice !== null)
-      .map((c) => ({
-        ...c,
-        currentPrice: typeof (c.currentPrice as any)?.toNumber === "function"
-          ? (c.currentPrice as any).toNumber()
-          : Number(c.currentPrice),
-      }));
+      .map((c) => ({ ...c, currentPrice: toNumber(c.currentPrice) }));
     
     if (productData.currentPrice === null) {
       console.warn(`Main product ${productData.id} has no price. Cannot apply pricing strategy.`);
@@ -218,9 +211,8 @@ export class PriceTrackingService {
       return;
     }
 
-    const mainPrice = typeof (productData.currentPrice as any)?.toNumber === "function"
-      ? (productData.currentPrice as any).toNumber()
-      : Number(productData.currentPrice);
+    const mainPrice = toNumber(productData.currentPrice);
+    if (mainPrice === null) return;
     
     const recommendedPriceResult = pricingStrategyService.calculateRecommendedPrice(
       { price: mainPrice, currency: productData.currency },

@@ -13,6 +13,8 @@ type StrategyRow = {
   name: string;
   type: string;
   config?: string | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 };
 
 export default async function StrategiesPage() {
