@@ -1,27 +1,20 @@
-// src/app/products/[productId]/CompetitorsSection.tsx
+// src/app/dashboard/[productId]/CompetitorsSection.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import CompetitorsTable from "@/components/CompetitorsTable";
 import { Input } from "@/components/ui/input";
-import type { ReactElement } from "react";
 
-type Competitor = {
-  id: string;
-  url: string;
-  name?: string | null;
-  currentPrice?: number | null;
-};
 
-type Props = {
+interface CompetitorsSectionProps {
   productId: string;
-  competitors: Competitor[];
-};
+  competitors: any[];
+  handleAddCompetitor: (formData: FormData) => Promise<any>;
+  handleTrackCompetitor: (competitorId: string) => Promise<any>;
+}
 
-export default function CompetitorsSection({ productId, competitors }: Props): ReactElement {
-  const isLoading = false; // never reassigned
-
+export default function CompetitorsSection({ productId, competitors, handleAddCompetitor, handleTrackCompetitor }: CompetitorsSectionProps) {
   return (
     <Card className="mb-10 shadow-sm">
       <CardHeader className="pb-4">

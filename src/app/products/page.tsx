@@ -1,7 +1,7 @@
 // في ملف src/app/products/page.tsx
 
 import { db } from "@/lib/db";
-import DashboardClient from "./productsClient";
+import ProductsClient from "./productsClient";
 
 export default async function DashboardPage() {
   const userId = "example_user_id";
@@ -21,25 +21,35 @@ export default async function DashboardPage() {
   });
 
   // ⚠️ تحويل جميع قيم Decimal إلى Number قبل تمريرها
-  const sanitizedProducts = products.map((product) => {
-    const recommendedPrice = product.strategies[0]?.recommendedPrice?.toNumber() || null;
-    const strategyName = product.strategies[0]?.strategy.name || "N/A";
-    
-    // sanitizing nested Decimal values in competitors
-    const sanitizedCompetitors = product.competitors.map(c => ({
-      ...c,
-      currentPrice: c.currentPrice?.toNumber() || null
-    }));
+  const toNumberSafe = (v: unknown): number | null => {
+    if (v == null) return null;
+    // handle Prisma Decimal instances (have .toNumber())
+    if (typeof (v as any)?.toNumber === "function") return (v as any).toNumber();
+    const n = Number(v as any);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const sanitizedProducts = products.map(({ strategies = [], competitors = [], currentPrice, cost, ...rest }) => {
+    const recommendedPrice = toNumberSafe(strategies[0]?.recommendedPrice);
+    const strategyName = strategies[0]?.strategy?.name ?? "N/A";
 
     return {
-      ...product,
-      currentPrice: product.currentPrice?.toNumber() || null,
-      cost: product.cost?.toNumber() || null,
-      competitors: sanitizedCompetitors,
+      ...rest,
+      currentPrice: toNumberSafe(currentPrice),
+      cost: toNumberSafe(cost),
+      competitors: competitors.map((c) => ({
+        ...c,
+        currentPrice: toNumberSafe(c.currentPrice),
+      })),
+      strategies: strategies.map((s) => ({
+        ...s,
+        recommendedPrice: toNumberSafe(s.recommendedPrice),
+      })),
+      // keep a convenient top-level value if you used it earlier
       recommendedPrice,
       strategyName,
     };
   });
 
-  return <DashboardClient products={sanitizedProducts} />;
+  return <ProductsClient products={sanitizedProducts} />;
 }

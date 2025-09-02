@@ -1,10 +1,13 @@
-// في ملف app/products/[productId]/page.tsx
+// في ملف app/dashboard/[productId]/page.tsx
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { updateProductCostAction } from "@/actions/product-actions";
+import { addCompetitorAction, trackCompetitorAction, updateProductCostAction } from "@/actions/product-actions";
+import { linkStrategyAction } from "@/actions/pricing-actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, TrendingUp, Package, DollarSign, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -36,7 +39,7 @@ function CostUpdateForm({ productId, initialCost }: { productId: string; initial
 }
 
 export default async function ProductPage({ params }: { params: { productId: string } }) {
-  const { productId } = await params;
+  const { productId } = params;
   const product = await db.product.findUnique({
     where: { id: productId },
     include: {
@@ -58,30 +61,20 @@ export default async function ProductPage({ params }: { params: { productId: str
 
   const sanitizedProduct = {
     ...product,
-    currentPrice: product.currentPrice?.toNumber() ?? null,
-    cost: product.cost?.toNumber() ?? null,
-    competitors: product.competitors.map((c) => ({
+    currentPrice: product.currentPrice?.toNumber() || null,
+    cost: product.cost?.toNumber() || null,
+    competitors: product.competitors.map(c => ({
       ...c,
-      currentPrice: c.currentPrice?.toNumber() ?? null,
+      currentPrice: c.currentPrice?.toNumber() || null,
       product: {
         ...c.product,
-        currentPrice: c.product.currentPrice?.toNumber() ?? null,
-        cost: c.product.cost?.toNumber() ?? null,
+        currentPrice: c.product.currentPrice?.toNumber() || null,
+        cost: c.product.cost?.toNumber() || null,
       },
     })),
-    // Ensure product.strategy (productStrategy) Decimal fields are converted
-    strategies: product.strategies.map((ps) => ({
-      // copy primitive fields
-      id: ps.id,
-      productId: ps.productId,
-      strategyId: ps.strategyId,
-      isActive: ps.isActive,
-      // convert Decimal to number (or null)
-      recommendedPrice: ps.recommendedPrice?.toNumber() ?? null,
-      // preserve nested strategy object (assumed serializable)
-      strategy: ps.strategy,
-      createdAt: ps.createdAt,
-      updatedAt: ps.updatedAt,
+    strategies: product.strategies.map(s => ({
+      ...s,
+      recommendedPrice: s.recommendedPrice?.toNumber() || null,
     })),
   };
   
@@ -89,9 +82,9 @@ export default async function ProductPage({ params }: { params: { productId: str
   const highestPrice = sanitizedProduct.competitors.reduce((max, c) => c.currentPrice !== null && c.currentPrice > max ? c.currentPrice : max, -Infinity);
   const recommendedPrice = sanitizedProduct.strategies[0]?.recommendedPrice;
 
-  // Do not pass server function values into Client Components. Use forms/actions or client fetch instead.
-  // Keep updateProductCostAction for the server-side <form action={...}> usage below.
-  const handleUpdateCost = undefined; // intentionally unused here
+  const handleAddCompetitor = addCompetitorAction.bind(null, productId);
+  const handleTrackCompetitor = trackCompetitorAction;
+  const handleUpdateCost = updateProductCostAction.bind(null, productId);
   
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -120,10 +113,10 @@ export default async function ProductPage({ params }: { params: { productId: str
           </div>
           
           <div className="flex gap-3">
-            <Link href={`/products/products/${productId}/edit`}>
+            <Link href={`/dashboard/products/${productId}/edit`}>
               <Button variant="outline">Edit Product</Button>
             </Link>
-            <Link href={`/products/products`}>
+            <Link href={`/dashboard/products`}>
               <Button variant="ghost">Back to Products</Button>
             </Link>
           </div>
@@ -210,8 +203,8 @@ export default async function ProductPage({ params }: { params: { productId: str
       <CompetitorsSection 
         productId={product.id} 
         competitors={sanitizedProduct.competitors} 
-        handleAddCompetitor={undefined} // ⚠️ تم تمرير الدالة
-        handleTrackCompetitor={undefined} // ⚠️ تم تمرير الدالة
+        handleAddCompetitor={handleAddCompetitor} // ⚠️ تم تمرير الدالة
+        handleTrackCompetitor={handleTrackCompetitor} // ⚠️ تم تمرير الدالة
       />
       
       {/* Strategy Section */}
@@ -230,7 +223,7 @@ export default async function ProductPage({ params }: { params: { productId: str
           />
           
           <div className="pt-4 border-t border-gray-100">
-            <Link href={`/products/strategies`}>
+            <Link href={`/dashboard/strategies`}>
               <Button variant="outline" className="w-full">
                 Manage Pricing Strategies
               </Button>

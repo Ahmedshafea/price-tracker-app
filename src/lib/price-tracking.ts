@@ -1,37 +1,35 @@
+// في ملف lib/price-tracking.ts
+// ⚠️ تم حذف "use server" من هنا
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 import { scrapeProduct, ScrapedProductData } from './scraper';
 import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
 import { normalizeCurrency } from './extractors';
-import type { PriceData } from "./types";
-// helper to convert Prisma Decimal-like values to number
-function toNumber(val: unknown): number | null {
-  if (val === null || val === undefined) return null;
-  // @ts-ignore runtime check for Prisma Decimal
-  if (typeof (val as any)?.toNumber === "function") return (val as any).toNumber();
-  const n = Number(val as unknown as number);
-  return Number.isFinite(n) ? n : null;
+
+// واجهات البيانات
+interface PriceData {
+  price?: number;
+  stockStatus?: string;
+  name?: string;
+  image?: string;
+  currency?: string;
 }
 
 export class PriceTrackingService {
-  private zai: unknown | null;
+  private zai: any;
   constructor() { this.zai = null; }
   private async initializeZAI() {
     if (!this.zai) { this.zai = await ZAI.create(); }
     return this.zai;
   }
-
   // --- دوال Scraping والتحليل ---
   async scrapeProductData(url: string): Promise<ScrapedProductData | any> {
-    try {
-      return await scrapeProduct(url);
-    } catch (error) {
+    try { return await scrapeProduct(url); } catch (error) {
       console.error('Error scraping product data:', error);
       return null;
     }
   }
-
   private determineStockStatus(originalText?: string): string {
     const text = originalText?.toLowerCase();
     if (!text) return 'UNKNOWN';
@@ -40,16 +38,13 @@ export class PriceTrackingService {
     }
     return 'IN_STOCK';
   }
-
   // ⚠️ دالة جديدة ومحسنة لتحويل العملات
   private async convertPrice(from: string, to: string, amount: number): Promise<number> {
     const normalizedFrom = normalizeCurrency(from);
     const normalizedTo = normalizeCurrency(to);
-    
     if (normalizedFrom === normalizedTo) {
       return amount;
     }
-    
     try {
       const response = await axios.get(`https://open.er-api.com/v6/latest/${normalizedFrom}`);
       if (!response.data || !response.data.rates || !response.data.rates[normalizedTo]) {
@@ -63,8 +58,6 @@ export class PriceTrackingService {
       return amount;
     }
   }
-
-  // Action for adding product from URL
   async addProductFromUrl(url: string, userId: string) {
     try {
       const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
@@ -94,19 +87,15 @@ export class PriceTrackingService {
       return { success: false, error: error.message };
     }
   }
-
-  // Action for adding competitor product
   async addCompetitorProduct(productId: string, url: string) {
     try {
       const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
       if (!scrapedData) {
         throw new Error('Failed to scrape competitor product data');
       }
-
       const competitorsToCreate = scrapedData.variants && scrapedData.variants.length > 0
         ? scrapedData.variants
         : [scrapedData];
-
       const createdCompetitors = [];
       for (const competitorData of competitorsToCreate) {
         const competitor = await db.competitorProduct.create({
@@ -121,15 +110,12 @@ export class PriceTrackingService {
         });
         createdCompetitors.push(competitor);
       }
-
       return { success: true, competitors: createdCompetitors };
     } catch (error) {
       console.error('Error adding competitor product:', error);
       return { success: false, error: error.message };
     }
   }
-
-  // ⚠️ إضافة الدالة المفقودة هنا
   async deleteCompetitorProduct(competitorId: string) {
     try {
       await db.competitorProduct.delete({
@@ -141,26 +127,17 @@ export class PriceTrackingService {
       return { success: false, error: error.message };
     }
   }
-
-  // Action for tracking single competitor
   async trackSingleCompetitor(competitor: any): Promise<{ priceChanged: boolean }> {
     try {
       const scrapedData = await this.scrapeProductData(competitor.url);
       let priceChanged = false;
-      
-      const mainProduct = await db.product.findUnique({
-        where: { id: competitor.productId },
-      });
-
+      const mainProduct = await db.product.findUnique({ where: { id: competitor.productId } });
       if (!mainProduct) return { priceChanged: false };
       if (!scrapedData || scrapedData.price === null) return { priceChanged: false };
-      
       const convertedPrice = await this.convertPrice(scrapedData.currency, mainProduct.currency, scrapedData.price);
-      
       if (convertedPrice !== competitor.currentPrice) {
         priceChanged = true;
       }
-
       await db.competitorProduct.update({
         where: { id: competitor.id },
         data: {
@@ -176,8 +153,6 @@ export class PriceTrackingService {
       return { priceChanged: false };
     }
   }
-  
-  // ⚠️ الدالة المسؤولة عن تطبيق الاستراتيجيات
   async applyPricingStrategies(product: { id: string }) {
     const productData = await db.product.findUnique({
       where: { id: product.id },
@@ -189,37 +164,25 @@ export class PriceTrackingService {
         },
       },
     });
-
     if (!productData || productData.strategies.length === 0) {
       return;
     }
-
     const activeStrategy = productData.strategies[0];
     const strategyConfig = JSON.parse(activeStrategy.strategy.config);
-
-    const competitorsWithPrices = productData.competitors
-      .filter((c) => c.currentPrice !== null)
-      .map((c) => ({ ...c, currentPrice: toNumber(c.currentPrice) }));
-    
+    const competitorsWithPrices = productData.competitors.filter(c => c.currentPrice !== null);
     if (productData.currentPrice === null) {
       console.warn(`Main product ${productData.id} has no price. Cannot apply pricing strategy.`);
       return;
     }
-
     if (competitorsWithPrices.length === 0) {
       console.warn(`No competitor prices available for product ${productData.id}. Cannot apply pricing strategy.`);
       return;
     }
-
-    const mainPrice = toNumber(productData.currentPrice);
-    if (mainPrice === null) return;
-    
     const recommendedPriceResult = pricingStrategyService.calculateRecommendedPrice(
-      { price: mainPrice, currency: productData.currency },
+      { price: productData.currentPrice.toNumber(), currency: productData.currency },
       competitorsWithPrices,
       strategyConfig
     );
-
     if (recommendedPriceResult) {
       await db.productStrategy.update({
         where: { id: activeStrategy.id },
@@ -229,56 +192,6 @@ export class PriceTrackingService {
       });
     }
   }
-
-    async scrapeAndSaveProduct(productId: string, url: string) {
-      try {
-          const scrapedData = await this.scrapeProductData(url);
-          if (scrapedData && 'title' in scrapedData) {
-              await db.product.update({
-                  where: { id: productId },
-                  data: {
-                      name: scrapedData.title,
-                      currentPrice: scrapedData.price || 0,
-                      currency: scrapedData.currency || 'USD',
-                      imageUrl: scrapedData.image,
-                  },
-              });
-          }
-      } catch (error) {
-          console.error(`Failed to scrape and save product ${productId}:`, error);
-      }
-  }
-
-  // ⚠️ دالة جديدة لسحب وتحديث بيانات المنافس
-  async scrapeAndSaveCompetitor(competitorId: string, url: string) {
-      try {
-          const scrapedData = await this.scrapeProductData(url);
-          const competitor = await db.competitorProduct.findUnique({ where: { id: competitorId } });
-          const mainProduct = await db.product.findUnique({ where: { id: competitor.productId } });
-
-          if (scrapedData && 'title' in scrapedData && mainProduct) {
-              const convertedPrice = await this.convertPrice(scrapedData.currency, mainProduct.currency, scrapedData.price || 0);
-
-              await db.competitorProduct.update({
-                  where: { id: competitorId },
-                  data: {
-                      name: scrapedData.title,
-                      currentPrice: convertedPrice,
-                      currency: mainProduct.currency,
-                      imageUrl: scrapedData.image,
-                  },
-              });
-
-              // بعد تحديث سعر المنافس، قم بتطبيق الاستراتيجية
-              await this.applyPricingStrategies({ id: mainProduct.id });
-          }
-      } catch (error) {
-          console.error(`Failed to scrape and save competitor ${competitorId}:`, error);
-      }
-  }
-
-
 }
-
 const priceTrackingService = new PriceTrackingService();
 export { priceTrackingService };

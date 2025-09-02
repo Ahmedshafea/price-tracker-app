@@ -29,9 +29,18 @@ export class PricingStrategyService {
       return null;
     }
 
+    const toNumberSafe = (val: unknown): number | null => {
+      if (val === null || val === undefined) return null;
+      if (typeof (val as any)?.toNumber === "function") {
+        return (val as any).toNumber();
+      }
+      const n = Number(val as unknown as number);
+      return Number.isFinite(n) ? n : null;
+    };
+
     const validCompetitorPrices = competitors
-      .filter(comp => comp.currentPrice !== null)
-      .map(comp => comp.currentPrice.toNumber()) as number[]
+      .map((comp) => toNumberSafe(comp.currentPrice))
+      .filter((n): n is number => n !== null);
 
     if (validCompetitorPrices.length === 0) {
       return null
