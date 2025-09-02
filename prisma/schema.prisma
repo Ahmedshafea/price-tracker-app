@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  name         String?
+  products     Product[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  notifications Notification[]
+}
+
+model Product {
+  id           String            @id @default(uuid())
+  name         String
+  currentPrice Decimal?          @db.Decimal(10, 2)
+  cost         Decimal?           
+  currency     String
+  imageUrl     String?
+  productUrl   String
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  competitors  CompetitorProduct[]
+  priceHistory PriceHistory[]
+  strategies   ProductStrategy[]
+}
+
+model CompetitorProduct {
+  id           String         @id @default(uuid())
+  name         String?
+  url          String         @unique
+  currentPrice Decimal?       @db.Decimal(10, 2)
+  currency     String?
+  imageUrl     String?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  productId    String
+  product      Product        @relation(fields: [productId], references: [id])
+  priceHistory PriceHistory[]
+}
+
+model PriceHistory {
+  id                  String            @id @default(uuid())
+  price               Decimal           @db.Decimal(10, 2)
+  currency            String
+  stockStatus         String            @default("UNKNOWN")
+  timestamp           DateTime          @default(now())
+  productId           String?
+  product             Product?          @relation(fields: [productId], references: [id])
+  competitorProductId String?
+  competitorProduct   CompetitorProduct? @relation(fields: [competitorProductId], references: [id])
+}
+
+model Strategy {
+  id       String            @id @default(uuid())
+  name     String
+  type     String            @unique
+  config   String            @default("{}") // JSON string
+  products ProductStrategy[]
+}
+
+model ProductStrategy {
+  id                 String   @id @default(uuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id])
+  strategyId         String
+  recommendedPrice   Decimal? @db.Decimal(10, 2) // ⚠️ حقل جديد
+  strategy           Strategy @relation(fields: [strategyId], references: [id])
+  isActive           Boolean  @default(true)
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  title     String
+  message   String
+  type      String
+  read      Boolean   @default(false)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}

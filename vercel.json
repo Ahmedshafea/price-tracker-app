@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/track-prices",
+      "schedule": "0 */6 * * *" // تشغيل كل 6 ساعات
+    }
+  ]
+}
