@@ -5,17 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import CompetitorsTable from "@/components/CompetitorsTable";
 import { Input } from "@/components/ui/input";
-import { Save } from "lucide-react";
+import type { ReactElement } from "react";
 
+type Competitor = {
+  id: string;
+  url: string;
+  name?: string | null;
+  currentPrice?: number | null;
+};
 
-interface CompetitorsSectionProps {
+type Props = {
   productId: string;
-  competitors: any[];
-  handleAddCompetitor: (formData: FormData) => Promise<any>;
-  handleTrackCompetitor: (competitorId: string) => Promise<any>;
-}
+  competitors: Competitor[];
+};
 
-export default function CompetitorsSection({ productId, competitors, handleAddCompetitor, handleTrackCompetitor }: CompetitorsSectionProps) {
+export default function CompetitorsSection({ productId, competitors }: Props): ReactElement {
+  const isLoading = false; // never reassigned
+
   return (
     <Card className="mb-10 shadow-sm">
       <CardHeader className="pb-4">

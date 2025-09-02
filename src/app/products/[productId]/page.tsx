@@ -3,11 +3,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { addCompetitorAction, trackCompetitorAction, updateProductCostAction } from "@/actions/product-actions";
-import { linkStrategyAction } from "@/actions/pricing-actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, TrendingUp, Package, DollarSign, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -92,9 +89,12 @@ export default async function ProductPage({ params }: { params: { productId: str
   const highestPrice = sanitizedProduct.competitors.reduce((max, c) => c.currentPrice !== null && c.currentPrice > max ? c.currentPrice : max, -Infinity);
   const recommendedPrice = sanitizedProduct.strategies[0]?.recommendedPrice;
 
-  const handleAddCompetitor = addCompetitorAction.bind(null, productId);
-  const handleTrackCompetitor = trackCompetitorAction;
-  const handleUpdateCost = updateProductCostAction.bind(null, productId);
+  // Do not bind server action functions and pass them into Client components.
+  // Pass only serializable props (productId / competitors) and use <form action={...}> or client fetch for interactivity.
+  // If you need a server action bound here, render the form in this Server Component instead.
+  const handleAddCompetitor = undefined;
+  const handleTrackCompetitor = undefined;
+  const handleUpdateCost = undefined;
   
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">

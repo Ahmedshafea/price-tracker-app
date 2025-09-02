@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { deleteProduct, deleteMultipleProducts, addNewProduct } from "@/actions/product-actions"; 
+import { deleteMultipleProducts, addNewProduct } from "@/actions/product-actions"; 
 
 // Helper functions
 function getDomainFromUrl(url: string): string {

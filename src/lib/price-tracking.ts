@@ -4,6 +4,8 @@ import { scrapeProduct, ScrapedProductData } from './scraper';
 import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
 import { normalizeCurrency } from './extractors';
+import type { PriceData } from "./types";
+import type { Decimal } from "@prisma/client/runtime"; // used only for runtime narrowing
 
 // واجهات البيانات
 interface PriceData {
@@ -15,7 +17,7 @@ interface PriceData {
 }
 
 export class PriceTrackingService {
-  private zai: any;
+  private zai: unknown | null;
   constructor() { this.zai = null; }
   private async initializeZAI() {
     if (!this.zai) { this.zai = await ZAI.create(); }
@@ -197,7 +199,14 @@ export class PriceTrackingService {
     const activeStrategy = productData.strategies[0];
     const strategyConfig = JSON.parse(activeStrategy.strategy.config);
 
-    const competitorsWithPrices = productData.competitors.filter(c => c.currentPrice !== null);
+    const competitorsWithPrices = productData.competitors
+      .filter((c) => c.currentPrice !== null)
+      .map((c) => ({
+        ...c,
+        currentPrice: typeof (c.currentPrice as any)?.toNumber === "function"
+          ? (c.currentPrice as any).toNumber()
+          : Number(c.currentPrice),
+      }));
     
     if (productData.currentPrice === null) {
       console.warn(`Main product ${productData.id} has no price. Cannot apply pricing strategy.`);
@@ -209,8 +218,12 @@ export class PriceTrackingService {
       return;
     }
 
+    const mainPrice = typeof (productData.currentPrice as any)?.toNumber === "function"
+      ? (productData.currentPrice as any).toNumber()
+      : Number(productData.currentPrice);
+    
     const recommendedPriceResult = pricingStrategyService.calculateRecommendedPrice(
-      { price: productData.currentPrice.toNumber(), currency: productData.currency },
+      { price: mainPrice, currency: productData.currency },
       competitorsWithPrices,
       strategyConfig
     );

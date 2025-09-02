@@ -1,7 +1,7 @@
 import { priceTrackingService } from "@/lib/price-tracking";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     await priceTrackingService.trackCompetitorPrices();
     return NextResponse.json({ success: true, message: "Price tracking completed." });

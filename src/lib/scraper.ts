@@ -5,15 +5,13 @@ import { extractPrice, extractCurrency, extractImage } from "./extractors";
 import { Page } from 'puppeteer';
 import axios from 'axios';
 
-export interface ScrapedProductData {
-  title: string;
-  price: number | null;
-  currency: string | null;
-  image: string | null;
-  fullPrice: string;
-  originalText: string | null;
-  variants?: ScrapedProductData[];
-}
+export type ScrapedProductData = {
+  title?: string;
+  price?: number | null;
+  currency?: string | null;
+  image?: string | null;
+  variants?: Array<{ title?: string; price?: number | null; currency?: string | null }>;
+};
 
 type ScrapeError = { error: string; isScrapingError: true };
 
@@ -171,7 +169,7 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
 }
 
 
-export async function scrapeProduct(url: string): Promise<ScrapedProductData | ScrapeError> {
+export async function scrapeProduct(url: string): Promise<ScrapedProductData | null> {
   const puppeteer = (await import("puppeteer")).default;
   let browser: any;
 

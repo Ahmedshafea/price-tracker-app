@@ -4,13 +4,19 @@
 import { db } from "@/lib/db";
 import StrategyForm from "./StrategyForm"; // The client component for the form
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { addStrategyAction } from "@/actions/pricing-actions";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+type StrategyRow = {
+  id: string;
+  name: string;
+  type: string;
+  config?: string | null;
+};
+
 export default async function StrategiesPage() {
-  const allStrategies = await db.strategy.findMany();
+  const allStrategies: StrategyRow[] = await db.strategy.findMany();
   
   const handleAddStrategy = async (formData: FormData) => {
     "use server";

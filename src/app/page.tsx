@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { priceTrackingService } from "../lib/price-tracking";
 import { redirect } from "next/navigation";
 

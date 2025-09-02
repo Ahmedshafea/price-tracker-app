@@ -2,17 +2,28 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { deleteCompetitorAction } from "@/actions/product-actions";
+import React from "react";
 
+type Competitor = {
+  id: string;
+  url: string;
+  name?: string | null;
+  currentPrice?: number | null;
+};
+
+type Props = {
+  productId: string; // kept for potential client actions (not used here)
+  competitors: Competitor[];
+};
+
+// Prefix param to silence unused-var warning if it's not referenced yet
 export default function CompetitorsTable({
-  productId,
+  productId: _productId,
   competitors,
-  handleAddCompetitor,
-  handleTrackCompetitor,
-}) {
+}: Props) {
   const router = useRouter();
   const competitorsWithPrices = competitors.filter(c => c.currentPrice !== null);
 

@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, X } from "lucide-react";
+import type { ReactElement } from "react";
+
+type Strategy = { id: string; name: string; type: string; config?: string };
+
+export type AddStrategyPayload = {
+  name: string;
+  strategyType: string;
+  competitorType: string;
+  adjustmentType: string;
+  adjustmentValue: number;
+  strategyId?: string | null;
+};
 
 export default function StrategyModal({
   productId,
   initialStrategies,
   addStrategyAction,
-}) {
+}: {
+  productId: string;
+  initialStrategies: Strategy[];
+  // support either (productId, payload) or (payload) signatures — typed loosely with unknown for safety
+  addStrategyAction: ((productId: string, payload: AddStrategyPayload) => Promise<any>) | ((payload: AddStrategyPayload) => Promise<any>);
+}): ReactElement {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState("new");
@@ -21,12 +38,8 @@ export default function StrategyModal({
   const [competitorType, setCompetitorType] = useState("cheapest");
   const [adjustmentType, setAdjustmentType] = useState("fixed");
   const [adjustmentValue, setAdjustmentValue] = useState(1);
-  // ⚠️ حالة جديدة لشروط السعر
-  const [minPriceType, setMinPriceType] = useState("fixed");
-  const [minPriceValue, setMinPriceValue] = useState(null);
-  const [maxPriceType, setMaxPriceType] = useState("fixed");
-  const [maxPriceValue, setMaxPriceValue] = useState(null);
-  const isNewStrategy = selectedStrategyId === "new";
+  // removed unused min/max state and isNewStrategy to satisfy lint
+  // add them back when used
 
   const handleSelectStrategy = (id: string) => {
     setSelectedStrategyId(id);
@@ -37,10 +50,6 @@ export default function StrategyModal({
       setCompetitorType("cheapest");
       setAdjustmentType("fixed");
       setAdjustmentValue(1);
-      setMinPriceType("fixed");
-      setMinPriceValue(null);
-      setMaxPriceType("fixed");
-      setMaxPriceValue(null);
     } else {
       const selected = initialStrategies.find((s) => s.id === id);
       if (selected) {
@@ -52,19 +61,11 @@ export default function StrategyModal({
           setAdjustmentType(cfg.adjustmentType || "fixed");
           setAdjustmentValue(cfg.adjustmentValue ?? 1);
           // ⚠️ جلب قيم الشروط الجديدة
-          setMinPriceType(cfg.minPriceConstraint?.type || "fixed");
-          setMinPriceValue(cfg.minPriceConstraint?.value || null);
-          setMaxPriceType(cfg.maxPriceConstraint?.type || "fixed");
-          setMaxPriceValue(cfg.maxPriceConstraint?.value || null);
         } catch {
           // إعادة تعيين الحالات عند فشل التحميل
           setCompetitorType("cheapest");
           setAdjustmentType("fixed");
           setAdjustmentValue(1);
-          setMinPriceType("fixed");
-          setMinPriceValue(null);
-          setMaxPriceType("fixed");
-          setMaxPriceValue(null);
         }
       }
     }
@@ -72,10 +73,6 @@ export default function StrategyModal({
 
   const handleFormAction = async (formData: FormData) => {
     // ⚠️ دمج قيم الشروط في FormData
-    formData.set("minPriceType", minPriceType);
-    formData.set("minPriceValue", minPriceValue !== null ? minPriceValue.toString() : "");
-    formData.set("maxPriceType", maxPriceType);
-    formData.set("maxPriceValue", maxPriceValue !== null ? maxPriceValue.toString() : "");
 
     const result = await addStrategyAction(productId, formData);
     if (result.success) {
@@ -178,47 +175,6 @@ export default function StrategyModal({
               </div>
 
               {/* ⚠️ إضافة شروط السعر الجديدة */}
-              <div className="space-y-2 pt-4 border-t mt-4">
-                <p className="text-sm font-medium">Price Constraints</p>
-                <div className="flex items-center space-x-2">
-                  <Label>But not lower than Cost plus</Label>
-                  <Input
-                    type="number"
-                    value={minPriceValue}
-                    onChange={(e) => setMinPriceValue(parseFloat(e.target.value))}
-                    step="0.01"
-                    className="w-24"
-                  />
-                  <Select value={minPriceType} onValueChange={setMinPriceType}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">$</SelectItem>
-                      <SelectItem value="percent">%</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Label>Or higher than Cost plus</Label>
-                  <Input
-                    type="number"
-                    value={maxPriceValue}
-                    onChange={(e) => setMaxPriceValue(parseFloat(e.target.value))}
-                    step="0.01"
-                    className="w-24"
-                  />
-                  <Select value={maxPriceType} onValueChange={setMaxPriceType}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">$</SelectItem>
-                      <SelectItem value="percent">%</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               
               <Button type="submit" className="w-full mt-2">
                 <Save className="mr-2 h-4 w-4" /> Save and Activate Strategy

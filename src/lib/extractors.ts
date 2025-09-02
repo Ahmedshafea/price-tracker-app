@@ -376,3 +376,25 @@ export function normalizeCurrency(currency: string): string {
     
     return normalized;
 }
+
+// دالة لاستخراج السعر من نص عادي
+export function extractPriceFromText(original: unknown): number | null {
+  const originalText = String(original ?? "");
+  let extractedPrice: number | null = null;
+
+  // محاولة استخدام التعبيرات العادية لاستخراج السعر
+  try {
+    // نمط بسيط لاستخراج الأرقام مع الفواصل
+    const regex = /(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/;
+    const match = originalText.match(regex);
+    if (match && match[1]) {
+      let priceStr: string = match[1].replace(/,/g, ''); // إزالة الفواصل
+      let priceNumber = Number(priceStr);
+      return Number.isFinite(priceNumber) ? priceNumber : null;
+    }
+  } catch (e) {
+    console.log("خطأ في استخراج السعر من النص:", e);
+  }
+
+  return null;
+}
