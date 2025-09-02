@@ -4,6 +4,61 @@ import "server-only";
 
 import { Page } from 'puppeteer';
 
+const currencyMap: Record<string, string> = {
+    'د.ع': 'IQD', 'دينار عراقي': 'IQD', 'دينار': 'IQD', 'Iraqi Dinar': 'IQD',
+    'ج.م': 'EGP', 'جنيه': 'EGP', 'جنيه مصري': 'EGP', 'EGP': 'EGP',
+    'ر.س': 'SAR', 'ريال': 'SAR', 'ريال سعودي': 'SAR', 'SAR': 'SAR',
+    'د.إ': 'AED', 'درهم': 'AED', 'درهم إماراتي': 'AED', 'AED': 'AED',
+    'د.ك': 'KWD', 'دينار كويتي': 'KWD', 'KWD': 'KWD',
+    'ر.ق': 'QAR', 'ريال قطري': 'QAR', 'QAR': 'QAR',
+    'ر.ع': 'OMR', 'ريال عماني': 'OMR', 'OMR': 'OMR',
+    'د.ب': 'BHD', 'دينار بحريني': 'BHD', 'BHD': 'BHD',
+    'ج.س': 'SDG', 'جنيه سوداني': 'SDG', 'SDG': 'SDG',
+    'د.ل': 'LYD', 'دينار ليبي': 'LYD', 'LYD': 'LYD',
+    'د.أ': 'JOD', 'دينار أردني': 'JOD', 'JOD': 'JOD',
+    'ل.ل': 'LBP', 'ليرة لبنانية': 'LBP', 'LBP': 'LBP',
+    'د.ت': 'TND', 'دينار تونسي': 'TND', 'TND': 'TND',
+    'د.ج': 'DZD', 'دينار جزائري': 'DZD', 'DZD': 'DZD',
+    'د.م': 'MAD', 'درهم مغربي': 'MAD', 'MAD': 'MAD',
+    'ر.ي': 'YER', 'ريال يمني': 'YER', 'YER': 'YER',
+    'ل.س': 'SYP', 'ليرة سورية': 'SYP', 'SYP': 'SYP',
+    'ش.ص': 'SOS', 'شلن صومالي': 'SOS', 'SOS': 'SOS',
+    'ج.ق': 'DJF', 'فرنك جيبوتي': 'DJF', 'DJF': 'DJF',
+    'ك.ج': 'KMF', 'فرنك قمري': 'KMF', 'KMF': 'KMF',
+    'م.أ': 'MRU', 'أوقية موريتانية': 'MRU', 'MRU': 'MRU',
+    '$': 'USD', 'دولار أمريكي': 'USD', 'دولار': 'USD', 'USD': 'USD', 'Dollar': 'USD',
+    '€': 'EUR', 'يورو': 'EUR', 'EUR': 'EUR', 'Euro': 'EUR',
+    '£': 'GBP', 'جنيه استرليني': 'GBP', 'GBP': 'GBP',
+    '¥': 'JPY', 'ين ياباني': 'JPY', 'JPY': 'JPY',
+    'CHF': 'CHF', 'فرنك سويسري': 'CHF',
+    'AUD': 'AUD', 'دولار أسترالي': 'AUD',
+    'CAD': 'CAD', 'دولار كندي': 'CAD', 'C$': 'CAD',
+    '₩': 'KRW', 'وُن كوري': 'KRW', 'KRW': 'KRW',
+    'CNY': 'CNY', 'يوان صيني': 'CNY', 'RMB': 'CNY',
+    'INR': 'INR', 'روبية هندية': 'INR',
+    'RUB': 'RUB', 'روبل روسي': 'RUB'
+};
+
+export function normalizeCurrency(currencySymbolOrCode: string): string {
+    if (!currencySymbolOrCode) return 'USD'; // Default fallback
+    const upperCaseInput = currencySymbolOrCode.toUpperCase();
+    
+    // Check if the input is already a standard code
+    if (Object.values(currencyMap).includes(upperCaseInput)) {
+        return upperCaseInput;
+    }
+
+    // Look up the symbol or name in the map
+    for (const [key, value] of Object.entries(currencyMap)) {
+        if (currencySymbolOrCode.toLowerCase() === key.toLowerCase()) {
+            return value;
+        }
+    }
+
+    return upperCaseInput; // Return the uppercase input as a last resort
+}
+
+
 // دالة مخصصة لاستخلاص السعر فقط
 export async function extractPrice(page: Page): Promise<{ price: number | null; originalText: string | null }> {
   let extractedPrice: number | null = null;
@@ -99,7 +154,7 @@ export async function extractPrice(page: Page): Promise<{ price: number | null; 
     console.log("⚠️ المنتج غير متوفر.");
     return { price: null, originalText: "المنتج غير متوفر" };
   }
-  console.log("❌ لم يتم العثور على أي سعر");
+  console.log("❌ لم يتم العثور على أي سعر");
   return { price: null, originalText: null };
 }
 
@@ -109,14 +164,14 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
     const currency = await page.$eval("meta[property='product:price:currency']", (el: Element) => (el as HTMLMetaElement).content);
     if (currency) {
       console.log(`✅ وجدت العملة في Meta: ${currency}`);
-      return { currency };
+      return { currency: normalizeCurrency(currency) }; // Normalize the currency
     }
   } catch {}
   try {
     const currency = await page.$eval("meta[itemprop='priceCurrency']", (el: Element) => (el as HTMLMetaElement).content);
     if (currency) {
       console.log(`✅ وجدت العملة في Meta: ${currency}`);
-      return { currency };
+      return { currency: normalizeCurrency(currency) }; // Normalize the currency
     }
   } catch {}
   console.log("🔍 البحث عن العملة في JSON-LD...");
@@ -136,44 +191,11 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
     });
     if (currency) {
       console.log(`✅ وجدت العملة في JSON-LD: ${currency}`);
-      return { currency };
+      return { currency: normalizeCurrency(currency) }; // Normalize the currency
     }
   } catch {}
   console.log("🔍 البحث عن العملة في CSS Selectors...");
-  const currencyMap: Record<string, string> = {
-    'د.ع': 'IQD', 'دينار عراقي': 'IQD', 'دينار': 'IQD', 'Iraqi Dinar': 'IQD',
-    'ج.م': 'EGP', 'جنيه': 'EGP', 'جنيه مصري': 'EGP', 'EGP': 'EGP',
-    'ر.س': 'SAR', 'ريال': 'SAR', 'ريال سعودي': 'SAR', 'SAR': 'SAR',
-    'د.إ': 'AED', 'درهم': 'AED', 'درهم إماراتي': 'AED', 'AED': 'AED',
-    'د.ك': 'KWD', 'دينار كويتي': 'KWD', 'KWD': 'KWD',
-    'ر.ق': 'QAR', 'ريال قطري': 'QAR', 'QAR': 'QAR',
-    'ر.ع': 'OMR', 'ريال عماني': 'OMR', 'OMR': 'OMR',
-    'د.ب': 'BHD', 'دينار بحريني': 'BHD', 'BHD': 'BHD',
-    'ج.س': 'SDG', 'جنيه سوداني': 'SDG', 'SDG': 'SDG',
-    'د.ل': 'LYD', 'دينار ليبي': 'LYD', 'LYD': 'LYD',
-    'د.أ': 'JOD', 'دينار أردني': 'JOD', 'JOD': 'JOD',
-    'ل.ل': 'LBP', 'ليرة لبنانية': 'LBP', 'LBP': 'LBP',
-    'د.ت': 'TND', 'دينار تونسي': 'TND', 'TND': 'TND',
-    'د.ج': 'DZD', 'دينار جزائري': 'DZD', 'DZD': 'DZD',
-    'د.م': 'MAD', 'درهم مغربي': 'MAD', 'MAD': 'MAD',
-    'ر.ي': 'YER', 'ريال يمني': 'YER', 'YER': 'YER',
-    'ل.س': 'SYP', 'ليرة سورية': 'SYP', 'SYP': 'SYP',
-    'ش.ص': 'SOS', 'شلن صومالي': 'SOS', 'SOS': 'SOS',
-    'ج.ق': 'DJF', 'فرنك جيبوتي': 'DJF', 'DJF': 'DJF',
-    'ك.ج': 'KMF', 'فرنك قمري': 'KMF', 'KMF': 'KMF',
-    'م.أ': 'MRU', 'أوقية موريتانية': 'MRU', 'MRU': 'MRU',
-    '$': 'USD', 'دولار أمريكي': 'USD', 'دولار': 'USD', 'USD': 'USD', 'Dollar': 'USD',
-    '€': 'EUR', 'يورو': 'EUR', 'EUR': 'EUR', 'Euro': 'EUR',
-    '£': 'GBP', 'جنيه استرليني': 'GBP', 'GBP': 'GBP',
-    '¥': 'JPY', 'ين ياباني': 'JPY', 'JPY': 'JPY',
-    'CHF': 'CHF', 'فرنك سويسري': 'CHF',
-    'AUD': 'AUD', 'دولار أسترالي': 'AUD',
-    'CAD': 'CAD', 'دولار كندي': 'CAD', 'C$': 'CAD',
-    '₩': 'KRW', 'وُن كوري': 'KRW', 'KRW': 'KRW',
-    'CNY': 'CNY', 'يوان صيني': 'CNY', 'RMB': 'CNY',
-    'INR': 'INR', 'روبية هندية': 'INR',
-    'RUB': 'RUB', 'روبل روسي': 'RUB'
-  };
+  
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const priceSelectors = [
     ".a-price .a-offscreen",
@@ -216,7 +238,7 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
       }
     } catch {}
   }
-  console.log("⚠️ لم يتم العثور على عملة في البيانات المهيكلة أو CSS، جارٍ البحث في نص الصفحة...");
+  console.log("⚠️ لم يتم العثور على عملة في البيانات المهيكلة أو CSS، جارٍ البحث في نص الصفحة...");
   const pageText: string = await page.evaluate(() => document.body.innerText || "");
   const allText = pageText.toLowerCase();
   for (const [key, value] of Object.entries(currencyMap)) {
@@ -225,9 +247,11 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
       return { currency: value };
     }
   }
-  console.log("❌ لم يتم العثور على أي عملة");
+  console.log("❌ لم يتم العثور على أي عملة");
   return { currency: null };
 }
+
+
 
 export function parsePrice(priceText: string): { price: number | null; originalText: string } {
   if (!priceText || typeof priceText !== 'string')
@@ -242,7 +266,7 @@ export function parsePrice(priceText: string): { price: number | null; originalT
   console.log(`🔍 تحليل النص: "${cleanText}"`);
   const priceMatch = cleanText.match(/(\d[\d,.]*)/);
   if (!priceMatch) {
-    console.log("❌ لم يتم العثور على أي رقم للسعر");
+    console.log("❌ لم يتم العثور على أي رقم للسعر");
     return { price: null, originalText: cleanText };
   }
   const priceStr = priceMatch[1];
@@ -253,10 +277,12 @@ export function parsePrice(priceText: string): { price: number | null; originalT
     return { price: null, originalText: cleanText };
   }
   const result = { price: priceNumber, originalText: cleanText };
-  console.log(`✅ نتيجة تحليل السعر النهائية:`, result);
+  console.log(`✅ نتيجة تحليل السعر النهائية:`, result);
   return result;
 }
 
+
+// This function is now fine because "use server" at the top is removed.
 export function isValidPrice(priceText: string): boolean {
   if (!priceText || typeof priceText !== 'string') return false;
   const discountKeywords = ['خصم', 'توفير', 'تخفيض', 'نسبة', 'discount', 'off', 'sale'];
@@ -279,7 +305,7 @@ export function isValidPrice(priceText: string): boolean {
   return true;
 }
 
-// ⚠️ تم تصحيح هذا الجزء من الكود
+
 export async function extractImage(page: Page): Promise<{ image: string | null }> {
   console.log("🖼️ جارٍ استخراج صورة المنتج...");
   const imageSelectors = [
@@ -301,6 +327,6 @@ export async function extractImage(page: Page): Promise<{ image: string | null }
       }
     } catch {}
   }
-  console.log("❌ لم يتم العثور على أي صورة");
+  console.log("❌ لم يتم العثور على أي صورة");
   return { image: null };
 }
