@@ -5,7 +5,7 @@ import ZAI from 'z-ai-web-dev-sdk';
 import { scrapeProduct, ScrapedProductData } from './scraper';
 import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
-import { normalizeCurrency } from './extractors';
+import { normalizeCurrency } from '../utils/extractors';
 
 // واجهات البيانات
 interface PriceData {

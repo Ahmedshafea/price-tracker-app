@@ -1,4 +1,4 @@
-// في ملف src/lib/extractors.ts
+// في ملف src/utils/extractors.ts
 "use server";
 import "server-only";
 

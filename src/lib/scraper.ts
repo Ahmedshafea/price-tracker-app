@@ -1,7 +1,7 @@
 "use server";
 import "server-only";
 
-import { extractPrice, extractCurrency, extractImage } from "./extractors";
+import { extractPrice, extractCurrency, extractImage } from "../utils/extractors";
 import { Page } from 'puppeteer';
 import axios from 'axios';
 
