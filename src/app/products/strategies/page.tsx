@@ -39,7 +39,7 @@ export default async function StrategiesPage() {
       await db.strategy.create({
         data: {
           name,
-          type: strategyType as any,
+          type: strategyType, // تم إصلاح نوع any هنا
           config: JSON.stringify(strategyConfig)
         }
       });

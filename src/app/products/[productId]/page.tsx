@@ -79,7 +79,6 @@ export default async function ProductPage({ params }: { params: { productId: str
   
   const handleAddCompetitor = addCompetitorAction.bind(null, productId);
   const handleTrackCompetitor = trackCompetitorAction;
-  const handleUpdateCost = updateProductCostAction.bind(null, productId);
   
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">

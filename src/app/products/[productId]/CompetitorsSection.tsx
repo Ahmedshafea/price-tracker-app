@@ -13,12 +13,11 @@ interface Competitor {
   currency: string;
 }
 
-
 interface CompetitorsSectionProps {
   productId: string;
-  competitors: any[];
-  handleAddCompetitor: (formData: FormData) => Promise<any>;
-  handleTrackCompetitor: (competitorId: string) => Promise<any>;
+  competitors: Competitor[];
+  handleAddCompetitor: (formData: FormData) => Promise<void>;
+  handleTrackCompetitor: (competitorId: string) => Promise<void>;
 }
 
 export default function CompetitorsSection({ productId, competitors, handleAddCompetitor, handleTrackCompetitor }: CompetitorsSectionProps) {
