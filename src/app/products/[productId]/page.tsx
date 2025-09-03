@@ -33,7 +33,13 @@ function CostUpdateForm({ productId, initialCost }: { productId: string; initial
   );
 }
 
-export default async function ProductPage({ params }: { params: { productId: string } }) {
+interface ProductPageProps {
+  params: {
+    productId: string;
+  };
+}
+
+export default async function ProductPage({ params }: ProductPageProps) {
   const { productId } = params;
   const product = await db.product.findUnique({
     where: { id: productId },
