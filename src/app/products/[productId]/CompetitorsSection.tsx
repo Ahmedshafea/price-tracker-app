@@ -5,6 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import CompetitorsTable from "@/components/CompetitorsTable";
 import { Input } from "@/components/ui/input";
 
+interface Competitor {
+  id: string;
+  name: string;
+  currentPrice: number | null;
+  url: string;
+  currency: string;
+}
+
+
 interface CompetitorsSectionProps {
   productId: string;
   competitors: any[];

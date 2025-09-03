@@ -1,19 +1,10 @@
-// في ملف lib/price-tracking.ts
+// في ملف src/lib/price-tracking.ts
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 import { scrapeProduct, ScrapedProductData } from './scraper';
 import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
 import { normalizeCurrency } from './extractors';
-
-// واجهات البيانات
-interface PriceData {
-  price?: number;
-  stockStatus?: string;
-  name?: string;
-  image?: string;
-  currency?: string;
-}
 
 export class PriceTrackingService {
   private zai: typeof ZAI | null;
@@ -23,7 +14,7 @@ export class PriceTrackingService {
     return this.zai;
   }
   // --- دوال Scraping والتحليل ---
-  async scrapeProductData(url: string): Promise<ScrapedProductData | null>  {
+  async scrapeProductData(url: string): Promise<ScrapedProductData | null> {
     try { return await scrapeProduct(url); } catch (error) {
       console.error('Error scraping product data:', error);
       return null;
@@ -59,7 +50,7 @@ export class PriceTrackingService {
   }
   async addProductFromUrl(url: string, userId: string) {
     try {
-        const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
+        const scrapedData: ScrapedProductData | null = await this.scrapeProductData(url);
         if (!scrapedData || !scrapedData.title) { // ⚠️ Check if title is present
           console.log("Scraped result:", scrapedData);
           throw new Error('Failed to scrape product data or title is missing');
@@ -82,14 +73,15 @@ export class PriceTrackingService {
             createdProducts.push(product);
         }
         return { success: true, products: createdProducts, scrapedData };
-    } catch (error) {
-        console.error('Error adding product from URL:', error);
-        return { success: false, error: error.message };
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error adding product from URL:', errorMessage);
+        return { success: false, error: errorMessage };
     }
-}
+  }
 async addCompetitorProduct(productId: string, url: string) {
     try {
-      const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
+      const scrapedData: ScrapedProductData | null = await this.scrapeProductData(url);
       if (!scrapedData) {
         throw new Error('Failed to scrape competitor product data');
       }
@@ -111,9 +103,10 @@ async addCompetitorProduct(productId: string, url: string) {
         createdCompetitors.push(competitor);
       }
       return { success: true, competitors: createdCompetitors };
-    } catch (error) {
-      console.error('Error adding competitor product:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error adding competitor product:', errorMessage);
+        return { success: false, error: errorMessage };
     }
   }
   async deleteCompetitorProduct(competitorId: string) {
@@ -122,20 +115,20 @@ async addCompetitorProduct(productId: string, url: string) {
         where: { id: competitorId },
       });
       return { success: true };
-    } catch (error) {
-      console.error('Error deleting competitor product:', error);
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error deleting competitor product:', errorMessage);
+        return { success: false, error: errorMessage };
     }
   }
-  async trackSingleCompetitor(competitor: { id: string; url: string; productId: string; currentPrice: number | null }
-): Promise<{ priceChanged: boolean }> {
+  async trackSingleCompetitor(competitor: { id: string; url: string; productId: string; currentPrice: number | null; currency?: string }): Promise<{ priceChanged: boolean }> {
+    let priceChanged = false;
     try {
       const scrapedData = await this.scrapeProductData(competitor.url);
-      const priceChanged = false;
       const mainProduct = await db.product.findUnique({ where: { id: competitor.productId } });
       if (!mainProduct) return { priceChanged: false };
       if (!scrapedData || scrapedData.price === null) return { priceChanged: false };
-      const convertedPrice = await this.convertPrice(scrapedData.currency, mainProduct.currency, scrapedData.price);
+      const convertedPrice = await this.convertPrice(scrapedData.currency || 'USD', mainProduct.currency, scrapedData.price || 0);
       if (convertedPrice !== competitor.currentPrice) {
         priceChanged = true;
       }
@@ -149,13 +142,13 @@ async addCompetitorProduct(productId: string, url: string) {
         },
       });
       return { priceChanged };
-    } catch (error) {
-      console.error(`Error tracking competitor ${competitor.id}:`, error);
-      return { priceChanged: false };
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`Error tracking competitor ${competitor.id}:`, errorMessage);
+        return { priceChanged: false };
     }
   }
-  async applyPricingStrategies(product: { id: string; currentPrice: number | null; currency: string; cost: number | null }
-) {
+  async applyPricingStrategies(product: { id: string; currentPrice: number | null; currency: string; cost: number | null }) {
     const productData = await db.product.findUnique({
       where: { id: product.id },
       include: {
@@ -181,7 +174,7 @@ async addCompetitorProduct(productId: string, url: string) {
       return;
     }
     const recommendedPriceResult = pricingStrategyService.calculateRecommendedPrice(
-      { price: productData.currentPrice.toNumber(), currency: productData.currency },
+      { price: productData.currentPrice.toNumber(), currency: productData.currency, cost: productData.cost?.toNumber() || null },
       competitorsWithPrices,
       strategyConfig
     );

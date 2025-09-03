@@ -17,7 +17,6 @@ export interface ScrapedProductData {
   variants?: ScrapedProductData[];
 }
 
-
 type ScrapeError = { error: string; isScrapingError: true };
 
 // دالة لاستخلاص المتغيرات من JSON-LD
@@ -32,7 +31,9 @@ async function extractJsonLdVariants(page: Page, title: string): Promise<Scraped
           if (data && data['@type'] === 'Product' && data.offers) {
             return data;
           }
-        } catch {}
+        } catch (e) {
+          console.error("Error parsing JSON-LD:", e);
+        }
       }
       return null;
     });
@@ -65,8 +66,9 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
         const productData = await page.evaluate(() => {
             const candidateKeys = ['product', 'variants', 'shopify', 'dataLayer'];
             for (const key of candidateKeys) {
-                if (window[key as keyof Window] && (window[key as keyof Window] as { variants?: unknown[] })?.variants) {
-                    return (window[key as keyof Window] as any);
+                const windowWithKey = window as unknown as Record<string, unknown>;
+                if (windowWithKey[key] && (windowWithKey[key] as { variants?: unknown[] })?.variants) {
+                    return windowWithKey[key] as { variants: unknown[] };
                 }
             }
             return null;
@@ -74,13 +76,14 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
 
         if (productData && productData.variants) {
             for (const variant of productData.variants) {
-                if (variant.title && variant.price) {
+                const typedVariant = variant as { title?: string; price?: string | number; currency?: string; image?: { src?: string } };
+                if (typedVariant.title && typedVariant.price) {
                     variants.push({
-                        title: `${title} - ${variant.title.trim()}`,
-                        price: parseFloat(variant.price),
-                        currency: variant.currency || 'USD',
-                        image: variant.image?.src || null,
-                        fullPrice: `${variant.price} ${variant.currency || 'USD'}`,
+                        title: `${title} - ${typedVariant.title.trim()}`,
+                        price: typeof typedVariant.price === 'string' ? parseFloat(typedVariant.price) : typedVariant.price,
+                        currency: typedVariant.currency || 'USD',
+                        image: typedVariant.image?.src || null,
+                        fullPrice: `${typedVariant.price} ${typedVariant.currency || 'USD'}`,
                         originalText: null,
                     });
                 }
@@ -103,7 +106,7 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
                 for (const element of variantElements) {
                     await element.click();
                     await page.waitForTimeout(1000);
-                    const variantTitle = await page.evaluate(el => el.innerText || el.textContent, element) || 'Unknown Variant';
+                    const variantTitle = await page.evaluate((el: Element) => el.textContent || 'Unknown Variant', element);
                     const priceData = await extractPrice(page);
                     const currencyData = await extractCurrency(page);
                     const imageData = await extractImage(page);
@@ -134,22 +137,17 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
         const jsonUrl = `${url}.json`;
         const response = await axios.get(jsonUrl);
         const productData = response.data.product;
-        
         if (!productData || !productData.variants) {
             return null;
         }
-        
         const variants = productData.variants;
         const scrapedVariants: ScrapedProductData[] = [];
-        
         for (const variant of variants) {
             if (variant.id && variant.title && variant.price) {
                 let imageUrl = variant.featured_image?.src || productData.images[0]?.src || null;
-                
                 if (typeof imageUrl === 'object' && imageUrl !== null && 'url' in imageUrl) {
                     imageUrl = (imageUrl as { url: string }).url;
                 }
-                
                 scrapedVariants.push({
                     title: `${productData.title} - ${variant.title.trim()}`,
                     price: parseFloat(variant.price),
@@ -160,14 +158,12 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
                 });
             }
         }
-        
         return scrapedVariants.length > 0 ? scrapedVariants : null;
     } catch (e) {
         console.error("Error scraping Shopify product JSON:", e);
         return null;
     }
 }
-
 
 export async function scrapeProduct(url: string): Promise<ScrapedProductData | ScrapeError> {
   let browser: Browser | null = null;
@@ -236,8 +232,9 @@ export async function scrapeProduct(url: string): Promise<ScrapedProductData | S
         if (!response || response.status() >= 400) { throw new Error(`خطأ في تحميل الصفحة، الكود: ${response ? response.status() : "لا يوجد"}`); }
         pageLoaded = true;
         console.log("✅ تم تحميل الصفحة بنجاح");
-      } catch (error: any) {
-        console.log(`❌ فشلت المحاولة ${attempts}: ${error.message}`);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.log(`❌ فشلت المحاولة ${attempts}: ${errorMessage}`);
         if (attempts === maxAttempts) { return { error: `فشل في الوصول إلى الرابط. قد يكون الرابط غير صحيح أو الموقع لا يستجيب. يرجى المحاولة لاحقاً.`, isScrapingError: true, }; }
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
@@ -302,7 +299,6 @@ export async function scrapeProduct(url: string): Promise<ScrapedProductData | S
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     console.error(`🚨 خطأ عام: ${errorMessage}`);
-
     return { error: `حدث خطأ غير متوقع أثناء معالجة طلبك. يرجى إرسال تقرير بالمشكلة لتتم معالجتها.`, isScrapingError: true, };
   } finally {
     if (browser) { await browser.close(); }
