@@ -1,17 +1,21 @@
+// في ملف src/lib/scraper.ts
 "use server";
 import "server-only";
 
-import { extractPrice, extractCurrency, extractImage } from "../utils/extractors";
-import { Page } from 'puppeteer';
+import { extractPrice, extractCurrency, extractImage } from "./extractors";
+import puppeteer, { Page, Browser, HTTPRequest } from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import axios from 'axios';
 
-export type ScrapedProductData = {
-  title?: string;
-  price?: number | null;
-  currency?: string | null;
-  image?: string | null;
-  variants?: Array<{ title?: string; price?: number | null; currency?: string | null }>;
-};
+export interface ScrapedProductData {
+  title: string;
+  price: number | null;
+  currency: string | null;
+  image: string | null;
+  fullPrice: string;
+  originalText: string | null;
+  variants?: ScrapedProductData[];
+}
 
 type ScrapeError = { error: string; isScrapingError: true };
 
@@ -60,8 +64,8 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
         const productData = await page.evaluate(() => {
             const candidateKeys = ['product', 'variants', 'shopify', 'dataLayer'];
             for (const key of candidateKeys) {
-                if ((window as any)[key] && (window as any)[key].variants) {
-                    return (window as any)[key];
+                if (window[key as keyof Window] && (window[key as keyof Window] as any).variants) {
+                    return (window[key as keyof Window] as any);
                 }
             }
             return null;
@@ -102,7 +106,6 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
                     const priceData = await extractPrice(page);
                     const currencyData = await extractCurrency(page);
                     const imageData = await extractImage(page);
-                    
                     if (priceData.price !== null) {
                         variants.push({
                             title: `${title} - ${variantTitle.trim()}`,
@@ -125,31 +128,22 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
 }
 
 // دالة جديدة ومخصصة لمواقع Shopify
-// دالة جديدة ومخصصة لمواقع Shopify
-// دالة جديدة ومخصصة لمواقع Shopify
 async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData[] | null> {
     try {
         const jsonUrl = `${url}.json`;
         const response = await axios.get(jsonUrl);
         const productData = response.data.product;
-
         if (!productData || !productData.variants) {
             return null;
         }
-
         const variants = productData.variants;
         const scrapedVariants: ScrapedProductData[] = [];
-
         for (const variant of variants) {
             if (variant.id && variant.title && variant.price) {
-                // ⚠️ التعديل هنا: التأكد من أن imageUrl هو string ⚠️
                 let imageUrl = variant.featured_image?.src || productData.images[0]?.src || null;
-                
-                // إضافة فحص للتعامل مع الحالة التي يكون فيها imageUrl عبارة عن كائن
-                if (typeof imageUrl === 'object' && imageUrl !== null && imageUrl.url) {
-                    imageUrl = imageUrl.url;
+                if (typeof imageUrl === 'object' && imageUrl !== null && (imageUrl as any).url) {
+                    imageUrl = (imageUrl as any).url;
                 }
-
                 scrapedVariants.push({
                     title: `${productData.title} - ${variant.title.trim()}`,
                     price: parseFloat(variant.price),
@@ -160,7 +154,6 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
                 });
             }
         }
-        
         return scrapedVariants.length > 0 ? scrapedVariants : null;
     } catch (e) {
         console.error("Error scraping Shopify product JSON:", e);
@@ -168,26 +161,23 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
     }
 }
 
-
-export async function scrapeProduct(url: string): Promise<ScrapedProductData | null> {
-const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخدام puppeteer-core
-  let browser: any;
-
+export async function scrapeProduct(url: string): Promise<ScrapedProductData | ScrapeError> {
+  let browser: Browser | null = null;
   try {
     browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage",
-        "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-default-apps",
-      ],
-      defaultViewport: { width: 1366, height: 768 },
-    });
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath: await chromium.executablePath() || "/usr/bin/chromium-browser",
+    headless: chromium.headless,
+});
+
 
     const page = await browser.newPage();
     await page.setDefaultNavigationTimeout(60000);
     await page.setDefaultTimeout(60000);
     await page.setRequestInterception(true);
-    page.on("request", (req: any) => {
+
+    page.on("request", (req: HTTPRequest) => {
       const resourceType = req.resourceType();
       if (resourceType === "image" || resourceType === "stylesheet" || resourceType === "font") {
         req.abort();
@@ -196,7 +186,9 @@ const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخد
       }
     });
 
-    try { new URL(url); } catch (e) {
+    try {
+      new URL(url);
+    } catch (e) {
       return { error: `الرابط الذي أدخلته غير صحيح. يرجى التحقق من الرابط والمحاولة مرة أخرى.`, isScrapingError: true };
     }
 
@@ -224,8 +216,8 @@ const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخد
     }
     
     console.log(`🔄 جارٍ تحميل: ${url}`);
-    const pageLoaded = false;
-    const attempts = 0;
+    let pageLoaded = false;
+    let attempts = 0;
     const maxAttempts = 3;
 
     while (!pageLoaded && attempts < maxAttempts) {
@@ -253,7 +245,13 @@ const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخد
     }
 
     let title: string;
-    try { title = await page.title(); console.log(`📄 العنوان: ${title}`); } catch { title = "❌ لم يتم العثور على العنوان"; }
+    try {
+      const pageTitle = await page.title();
+      title = pageTitle || "Unknown Product";
+      console.log(`📄 العنوان: ${title}`);
+    } catch {
+      title = "❌ لم يتم العثور على العنوان";
+    }
     
     console.log("💲 جارٍ استخراج البيانات...");
     const jsonLdVariants = await extractJsonLdVariants(page, title);
@@ -279,7 +277,9 @@ const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخد
     const imageData = await extractImage(page);
     
     let fullPriceText: string;
-    if (priceData.price === null) { fullPriceText = "المنتج غير متوفر"; } else {
+    if (priceData.price === null) {
+      fullPriceText = "المنتج غير متوفر";
+    } else {
       fullPriceText = currencyData.currency ? `${priceData.price.toLocaleString("en-US")} ${currencyData.currency}` : priceData.price.toLocaleString("en-US");
     }
 

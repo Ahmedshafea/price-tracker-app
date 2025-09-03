@@ -4,7 +4,7 @@ import ZAI from 'z-ai-web-dev-sdk';
 import { scrapeProduct, ScrapedProductData } from './scraper';
 import { pricingStrategyService } from './pricing-strategy';
 import axios from 'axios';
-import { normalizeCurrency } from '../utils/extractors';
+import { normalizeCurrency } from './extractors';
 
 // واجهات البيانات
 interface PriceData {
@@ -59,34 +59,35 @@ export class PriceTrackingService {
   }
   async addProductFromUrl(url: string, userId: string) {
     try {
-      const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
-      if (!scrapedData) {
-        throw new Error('Failed to scrape product data');
-      }
-      const productsToCreate = scrapedData.variants && scrapedData.variants.length > 0
-        ? scrapedData.variants
-        : [scrapedData];
-      const createdProducts = [];
-      for (const productData of productsToCreate) {
-        const product = await db.product.create({
-          data: {
-            name: productData.title,
-            currentPrice: productData.price || 0,
-            currency: productData.currency || 'USD',
-            imageUrl: productData.image,
-            productUrl: url,
-            userId,
-          },
-        });
-        createdProducts.push(product);
-      }
-      return { success: true, products: createdProducts, scrapedData };
+        const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
+        if (!scrapedData || !scrapedData.title) { // ⚠️ Check if title is present
+          console.log("Scraped result:", scrapedData);
+          throw new Error('Failed to scrape product data or title is missing');
+        }
+        const productsToCreate = scrapedData.variants && scrapedData.variants.length > 0
+            ? scrapedData.variants
+            : [scrapedData];
+        const createdProducts = [];
+        for (const productData of productsToCreate) {
+            const product = await db.product.create({
+                data: {
+                    name: productData.title || 'Unknown Product', // ⚠️ Provide a fallback name
+                    currentPrice: productData.price || 0,
+                    currency: productData.currency || 'USD',
+                    imageUrl: productData.image,
+                    productUrl: url,
+                    userId,
+                },
+            });
+            createdProducts.push(product);
+        }
+        return { success: true, products: createdProducts, scrapedData };
     } catch (error) {
-      console.error('Error adding product from URL:', error);
-      return { success: false, error: error.message };
+        console.error('Error adding product from URL:', error);
+        return { success: false, error: error.message };
     }
-  }
-  async addCompetitorProduct(productId: string, url: string) {
+}
+async addCompetitorProduct(productId: string, url: string) {
     try {
       const scrapedData: ScrapedProductData | any = await this.scrapeProductData(url);
       if (!scrapedData) {

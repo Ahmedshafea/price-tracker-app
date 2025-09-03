@@ -113,7 +113,7 @@ export default async function ProductPage({ params }: { params: { productId: str
             </Link>
             <Link href={`/dashboard/products`}>
               <Button variant="ghost">Back to Products</Button>
-            </Button>
+            </Link>
           </div>
         </div>
         
