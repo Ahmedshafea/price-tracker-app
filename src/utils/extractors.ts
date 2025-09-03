@@ -1,5 +1,4 @@
 // في ملف src/utils/extractors.ts
-"use server";
 import "server-only";
 
 import { Page } from 'puppeteer';
