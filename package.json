@@ -2,12 +2,13 @@
   "name": "price-tracker",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
-  },
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "postinstall": "npx puppeteer browsers install chrome"
+},
   "dependencies": {
     "@prisma/client": "^6.15.0",
     "@radix-ui/react-label": "^2.1.7",
@@ -22,6 +23,7 @@
     "node-fetch": "^3.3.2",
     "prisma": "^6.15.0",
     "puppeteer": "^24.17.1",
+    "puppeteer-core": "^24.18.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "react": "19.1.0",

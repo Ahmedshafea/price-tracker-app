@@ -39,28 +39,23 @@ const currencyMap: Record<string, string> = {
     'RUB': 'RUB', 'روبل روسي': 'RUB'
 };
 
-export function normalizeCurrency(currencySymbolOrCode: string): string {
-    if (!currencySymbolOrCode) return 'USD'; // Default fallback
-    const upperCaseInput = currencySymbolOrCode.toUpperCase();
-    
-    // Check if the input is already a standard code
-    if (Object.values(currencyMap).includes(upperCaseInput)) {
-        return upperCaseInput;
+export const normalizeCurrency = (currencySymbolOrCode: string): string => {
+  if (!currencySymbolOrCode) return 'USD';
+  const upperCaseInput = currencySymbolOrCode.toUpperCase();
+  if (Object.values(currencyMap).includes(upperCaseInput)) {
+    return upperCaseInput;
+  }
+  for (const [key, value] of Object.entries(currencyMap)) {
+    if (currencySymbolOrCode.toLowerCase() === key.toLowerCase()) {
+      return value;
     }
-
-    // Look up the symbol or name in the map
-    for (const [key, value] of Object.entries(currencyMap)) {
-        if (currencySymbolOrCode.toLowerCase() === key.toLowerCase()) {
-            return value;
-        }
-    }
-
-    return upperCaseInput; // Return the uppercase input as a last resort
-}
+  }
+  return upperCaseInput;
+};
 
 
 // دالة مخصصة لاستخلاص السعر فقط
-export async function extractPrice(page: Page): Promise<{ price: number | null; originalText: string | null }> {
+export const extractPrice = async (page: Page): Promise<{ price: number | null; originalText: string | null }> => {
   let extractedPrice: number | null = null;
   let originalText: string | null = null;
   console.log("🔍 البحث عن السعر في Meta tags و JSON-LD...");
@@ -158,7 +153,7 @@ export async function extractPrice(page: Page): Promise<{ price: number | null; 
   return { price: null, originalText: null };
 }
 
-export async function extractCurrency(page: Page): Promise<{ currency: string | null }> {
+export const extractCurrency = async (page: Page): Promise<{ currency: string | null }> => {
   console.log("🔍 البحث عن العملة في Meta tags...");
   try {
     const currency = await page.$eval("meta[property='product:price:currency']", (el: Element) => (el as HTMLMetaElement).content);
@@ -253,7 +248,7 @@ export async function extractCurrency(page: Page): Promise<{ currency: string | 
 
 
 
-export function parsePrice(priceText: string): { price: number | null; originalText: string } {
+export const parsePrice = (priceText: string): { price: number | null; originalText: string } => {
   if (!priceText || typeof priceText !== 'string')
     return { price: null, originalText: priceText as string };
   const cleanText = priceText.toString().trim()
@@ -283,7 +278,7 @@ export function parsePrice(priceText: string): { price: number | null; originalT
 
 
 // This function is now fine because "use server" at the top is removed.
-export function isValidPrice(priceText: string): boolean {
+export const isValidPrice = (priceText: string): boolean => {
   if (!priceText || typeof priceText !== 'string') return false;
   const discountKeywords = ['خصم', 'توفير', 'تخفيض', 'نسبة', 'discount', 'off', 'sale'];
   const lowerCaseText = priceText.toLowerCase();
@@ -306,7 +301,7 @@ export function isValidPrice(priceText: string): boolean {
 }
 
 
-export async function extractImage(page: Page): Promise<{ image: string | null }> {
+export const extractImage = async (page: Page): Promise<{ image: string | null }> => {
   console.log("🖼️ جارٍ استخراج صورة المنتج...");
   const imageSelectors = [
     "meta[property='og:image']",
