@@ -31,12 +31,13 @@ export class PricingStrategyService {
 
     const toNumberSafe = (val: unknown): number | null => {
       if (val === null || val === undefined) return null;
-      if (typeof (val as any)?.toNumber === "function") {
-        return (val as any).toNumber();
+      if (typeof (val as { toNumber?: () => number })?.toNumber === "function") {
+        return (val as { toNumber: () => number }).toNumber();
       }
-      const n = Number(val as unknown as number);
+      const n = Number(val);
       return Number.isFinite(n) ? n : null;
     };
+
 
     const validCompetitorPrices = competitors
       .map((comp) => toNumberSafe(comp.currentPrice))

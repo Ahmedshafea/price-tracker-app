@@ -64,7 +64,7 @@ async function extractVariants(page: Page, title: string): Promise<ScrapedProduc
         const productData = await page.evaluate(() => {
             const candidateKeys = ['product', 'variants', 'shopify', 'dataLayer'];
             for (const key of candidateKeys) {
-                if (window[key as keyof Window] && (window[key as keyof Window] as any).variants) {
+                if (window[key as keyof Window] && (window[key as keyof Window] as { variants?: unknown[] })?.variants) {
                     return (window[key as keyof Window] as any);
                 }
             }
@@ -141,7 +141,8 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
         for (const variant of variants) {
             if (variant.id && variant.title && variant.price) {
                 let imageUrl = variant.featured_image?.src || productData.images[0]?.src || null;
-                if (typeof imageUrl === 'object' && imageUrl !== null && (imageUrl as any).url) {
+                if (typeof imageUrl === 'object' && imageUrl !== null && 'url' in imageUrl) {
+  imageUrl = (imageUrl as { url: string }).url;}
                     imageUrl = (imageUrl as any).url;
                 }
                 scrapedVariants.push({
@@ -291,8 +292,10 @@ export async function scrapeProduct(url: string): Promise<ScrapedProductData | S
 
     console.log(`💰 البيانات المستخرجة:`, result);
     return result;
-  } catch (err: any) {
-    console.error(`🚨 خطأ عام: ${err.message}`);
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error(`🚨 خطأ عام: ${errorMessage}`);
+
     return { error: `حدث خطأ غير متوقع أثناء معالجة طلبك. يرجى إرسال تقرير بالمشكلة لتتم معالجتها.`, isScrapingError: true, };
   } finally {
     if (browser) { await browser.close(); }

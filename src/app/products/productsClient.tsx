@@ -9,20 +9,7 @@ import Link from "next/link";
 import { deleteProductAction, deleteMultipleProducts, addProductFromUrl } from "@/actions/product-actions";
 import { Input } from "@/components/ui/input";
 
-// دالة لاستخراج الدومين من رابط المنافس
-function getDomainFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return "";
-  }
-}
 
-// دالة لاختصار النصوص الطويلة
-function truncateText(text: string, maxLength: number) {
-  if (!text) return "";
-  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
-}
 
 export default function DashboardClient({ products: initialProducts }) {
   const router = useRouter();

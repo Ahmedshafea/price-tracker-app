@@ -54,8 +54,8 @@ export const normalizeCurrency = (currencySymbolOrCode: string): string => {
 
 // دالة مخصصة لاستخلاص السعر فقط
 export const extractPrice = async (page: Page): Promise<{ price: number | null; originalText: string | null }> => {
-  let extractedPrice: number | null = null;
-  let originalText: string | null = null;
+  //let extractedPrice: number | null = null;
+  //let originalText: string | null = null;
   console.log("🔍 البحث عن السعر في Meta tags و JSON-LD...");
   const metaAndJsonPriceSelectors = [
     "meta[property='product:price:amount']",

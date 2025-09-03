@@ -16,14 +16,14 @@ interface PriceData {
 }
 
 export class PriceTrackingService {
-  private zai: any;
+  private zai: typeof ZAI | null;
   constructor() { this.zai = null; }
   private async initializeZAI() {
     if (!this.zai) { this.zai = await ZAI.create(); }
     return this.zai;
   }
   // --- دوال Scraping والتحليل ---
-  async scrapeProductData(url: string): Promise<ScrapedProductData | any> {
+  async scrapeProductData(url: string): Promise<ScrapedProductData | null>  {
     try { return await scrapeProduct(url); } catch (error) {
       console.error('Error scraping product data:', error);
       return null;
@@ -127,7 +127,8 @@ async addCompetitorProduct(productId: string, url: string) {
       return { success: false, error: error.message };
     }
   }
-  async trackSingleCompetitor(competitor: any): Promise<{ priceChanged: boolean }> {
+  async trackSingleCompetitor(competitor: { id: string; url: string; productId: string; currentPrice: number | null }
+): Promise<{ priceChanged: boolean }> {
     try {
       const scrapedData = await this.scrapeProductData(competitor.url);
       const priceChanged = false;
@@ -153,7 +154,8 @@ async addCompetitorProduct(productId: string, url: string) {
       return { priceChanged: false };
     }
   }
-  async applyPricingStrategies(product: { id: string }) {
+  async applyPricingStrategies(product: { id: string; currentPrice: number | null; currency: string; cost: number | null }
+) {
     const productData = await db.product.findUnique({
       where: { id: product.id },
       include: {
