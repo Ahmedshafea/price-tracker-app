@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 
 
 
-export default function DashboardClient({ products: initialProducts }) {
+export default function ProductsClient({ products: initialProducts }) {
   const router = useRouter();
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isAdding, setIsAdding] = useState(false);

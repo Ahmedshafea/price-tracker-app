@@ -48,6 +48,26 @@ export class PriceTrackingService {
       return amount;
     }
   }
+
+  async scrapeAndSaveProduct(productId: string, url: string) {
+      try {
+          const scrapedData = await this.scrapeProductData(url);
+          if (scrapedData && 'title' in scrapedData) {
+              await db.product.update({
+                  where: { id: productId },
+                  data: {
+                      name: scrapedData.title,
+                      currentPrice: scrapedData.price || 0,
+                      currency: scrapedData.currency || 'USD',
+                      imageUrl: scrapedData.image,
+                  },
+              });
+          }
+      } catch (error) {
+          console.error(`Failed to scrape and save product ${productId}:`, error);
+      }
+  }
+
   async addProductFromUrl(url: string, userId: string) {
     try {
         const scrapedData: ScrapedProductData | null = await this.scrapeProductData(url);
