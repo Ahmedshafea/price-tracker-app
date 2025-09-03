@@ -112,10 +112,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
           
           <div className="flex gap-3">
-            <Link href={`/dashboard/products/${productId}/edit`}>
+            <Link href={`/products/products/${productId}/edit`}>
               <Button variant="outline">Edit Product</Button>
             </Link>
-            <Link href={`/dashboard/products`}>
+            <Link href={`/products/products`}>
               <Button variant="ghost">Back to Products</Button>
             </Link>
           </div>
@@ -219,7 +219,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           />
           
           <div className="pt-4 border-t border-gray-100">
-            <Link href={`/dashboard/strategies`}>
+            <Link href={`/products/strategies`}>
               <Button variant="outline" className="w-full">
                 Manage Pricing Strategies
               </Button>

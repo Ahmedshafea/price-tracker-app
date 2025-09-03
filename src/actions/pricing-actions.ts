@@ -18,7 +18,7 @@ export async function addProductFromUrl(url: string, userId: string) {
     });
     // الخطوة 2: تشغيل عملية السحب في الخلفية بشكل غير متزامن
     priceTrackingService.scrapeAndSaveProduct(initialProduct.id, url);
-    revalidatePath(`/dashboard`);
+    revalidatePath(`/products`);
     return { success: true, productId: initialProduct.id };
 }
 
@@ -30,7 +30,7 @@ export async function addCompetitorAction(productId: string, formData: FormData)
   if (competitor.success) {
     await priceTrackingService.applyPricingStrategies({ id: productId });
   }
-  revalidatePath(`/dashboard/${productId}`);
+  revalidatePath(`/products/${productId}`);
 }
 
 // Action for tracking a single competitor
@@ -43,7 +43,7 @@ export async function trackCompetitorAction(competitorId: string) {
   const result = await priceTrackingService.trackSingleCompetitor(competitor);
   if (result.priceChanged && competitor.product.strategies.length > 0) {
     await priceTrackingService.applyPricingStrategies(competitor.product);
-    revalidatePath(`/dashboard/${competitor.productId}`);
+    revalidatePath(`/products/${competitor.productId}`);
   }
 }
 
@@ -59,7 +59,7 @@ export async function deleteCompetitorAction(competitorId: string) {
   const productId = competitor.productId;
   await priceTrackingService.deleteCompetitorProduct(competitorId);
   await priceTrackingService.applyPricingStrategies({ id: productId });
-  revalidatePath(`/dashboard/${productId}`);
+  revalidatePath(`/products/${productId}`);
 }
 
 // Action to update product cost
@@ -74,7 +74,7 @@ export async function updateProductCostAction(productId: string, formData: FormD
       data: { cost: cost },
     });
     await priceTrackingService.applyPricingStrategies({ id: productId });
-    revalidatePath(`/dashboard/${productId}`);
+    revalidatePath(`/products/${productId}`);
     return { success: true };
   } catch (error) {
     console.error("Error updating product cost:", error);
@@ -87,7 +87,7 @@ export async function deleteProductAction(formData: FormData) {
   const productId = formData.get("productId") as string;
   try {
     await db.product.delete({ where: { id: productId } });
-    revalidatePath("/dashboard");
+    revalidatePath("/products");
   } catch (error) {
     console.error("Error deleting product:", error);
   }
@@ -120,7 +120,7 @@ export async function createStrategyAction(formData: FormData) {
       },
     });
 
-    revalidatePath("/dashboard/strategies");
+    revalidatePath("/products/strategies");
     return { success: true, strategy: newStrategy };
   } catch (error) {
     console.error("Error creating new strategy:", error);
@@ -156,7 +156,7 @@ export async function linkStrategyAction(productId: string, formData: FormData) 
     // ⚠️ استدعاء دالة الحساب بشكل منفصل
     await priceTrackingService.applyPricingStrategies({ id: productId });
 
-    revalidatePath(`/dashboard/${productId}`);
+    revalidatePath(`/products/${productId}`);
     return { success: true };
   } catch (error) {
     console.error("Error linking strategy:", error);
