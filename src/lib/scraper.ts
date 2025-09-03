@@ -17,6 +17,7 @@ export interface ScrapedProductData {
   variants?: ScrapedProductData[];
 }
 
+
 type ScrapeError = { error: string; isScrapingError: true };
 
 // دالة لاستخلاص المتغيرات من JSON-LD
@@ -133,18 +134,22 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
         const jsonUrl = `${url}.json`;
         const response = await axios.get(jsonUrl);
         const productData = response.data.product;
+        
         if (!productData || !productData.variants) {
             return null;
         }
+        
         const variants = productData.variants;
         const scrapedVariants: ScrapedProductData[] = [];
+        
         for (const variant of variants) {
             if (variant.id && variant.title && variant.price) {
                 let imageUrl = variant.featured_image?.src || productData.images[0]?.src || null;
+                
                 if (typeof imageUrl === 'object' && imageUrl !== null && 'url' in imageUrl) {
-  imageUrl = (imageUrl as { url: string }).url;}
-                    imageUrl = (imageUrl as any).url;
+                    imageUrl = (imageUrl as { url: string }).url;
                 }
+                
                 scrapedVariants.push({
                     title: `${productData.title} - ${variant.title.trim()}`,
                     price: parseFloat(variant.price),
@@ -155,12 +160,14 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
                 });
             }
         }
+        
         return scrapedVariants.length > 0 ? scrapedVariants : null;
     } catch (e) {
         console.error("Error scraping Shopify product JSON:", e);
         return null;
     }
 }
+
 
 export async function scrapeProduct(url: string): Promise<ScrapedProductData | ScrapeError> {
   let browser: Browser | null = null;
