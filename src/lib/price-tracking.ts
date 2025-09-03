@@ -1,5 +1,4 @@
 // في ملف lib/price-tracking.ts
-// ⚠️ تم حذف "use server" من هنا
 import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 import { scrapeProduct, ScrapedProductData } from './scraper';
@@ -130,7 +129,7 @@ export class PriceTrackingService {
   async trackSingleCompetitor(competitor: any): Promise<{ priceChanged: boolean }> {
     try {
       const scrapedData = await this.scrapeProductData(competitor.url);
-      let priceChanged = false;
+      const priceChanged = false;
       const mainProduct = await db.product.findUnique({ where: { id: competitor.productId } });
       if (!mainProduct) return { priceChanged: false };
       if (!scrapedData || scrapedData.price === null) return { priceChanged: false };

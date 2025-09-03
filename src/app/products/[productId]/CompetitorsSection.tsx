@@ -1,4 +1,3 @@
-// src/app/dashboard/[productId]/CompetitorsSection.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import CompetitorsTable from "@/components/CompetitorsTable";
 import { Input } from "@/components/ui/input";
 
-
+// ⚠️ Correcting 'any' types
 interface CompetitorsSectionProps {
   productId: string;
   competitors: any[];

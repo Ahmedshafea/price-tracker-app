@@ -170,7 +170,7 @@ async function scrapeShopifyProductJson(url: string): Promise<ScrapedProductData
 
 
 export async function scrapeProduct(url: string): Promise<ScrapedProductData | null> {
-  const puppeteer = (await import("puppeteer")).default;
+const puppeteer = (await import("puppeteer-core")).default; // ⚠️ استخدام puppeteer-core
   let browser: any;
 
   try {
@@ -224,8 +224,8 @@ export async function scrapeProduct(url: string): Promise<ScrapedProductData | n
     }
     
     console.log(`🔄 جارٍ تحميل: ${url}`);
-    let pageLoaded = false;
-    let attempts = 0;
+    const pageLoaded = false;
+    const attempts = 0;
     const maxAttempts = 3;
 
     while (!pageLoaded && attempts < maxAttempts) {

@@ -101,7 +101,7 @@ export class PricingStrategyService {
 
     // ⚠️ تطبيق شروط السعر الجديدة
     if (strategy.minPriceConstraint && mainProduct.cost !== null) {
-        let minPrice = 0;
+        const minPrice = 0;
         if (strategy.minPriceConstraint.type === 'fixed') {
             minPrice = mainProduct.cost + strategy.minPriceConstraint.value;
         } else { // percent
@@ -111,7 +111,7 @@ export class PricingStrategyService {
     }
     
     if (strategy.maxPriceConstraint && mainProduct.cost !== null) {
-        let maxPrice = 0;
+        const maxPrice = 0;
         if (strategy.maxPriceConstraint.type === 'fixed') {
             maxPrice = mainProduct.cost + strategy.maxPriceConstraint.value;
         } else { // percent

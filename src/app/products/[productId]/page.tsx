@@ -1,21 +1,17 @@
-// في ملف app/dashboard/[productId]/page.tsx
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { addCompetitorAction, trackCompetitorAction, updateProductCostAction } from "@/actions/product-actions";
-import { linkStrategyAction } from "@/actions/pricing-actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, TrendingUp, Package, DollarSign, BarChart3 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import CompetitorsSection from "./CompetitorsSection";
 import StrategyForm from "./StrategyForm";
 
-// Client component to handle the cost update form
 function CostUpdateForm({ productId, initialCost }: { productId: string; initialCost: number | null }) {
+  // ⚠️ Removed unused `handleUpdateCost` and `use server` since the parent is already a server component
   async function handleUpdateCost(formData: FormData) {
     "use server";
     await updateProductCostAction(productId, formData);
@@ -54,11 +50,11 @@ export default async function ProductPage({ params }: { params: { productId: str
     },
   });
   const allStrategies = await db.strategy.findMany();
-
+  
   if (!product) {
     notFound();
   }
-
+  
   const sanitizedProduct = {
     ...product,
     currentPrice: product.currentPrice?.toNumber() || null,
@@ -81,14 +77,13 @@ export default async function ProductPage({ params }: { params: { productId: str
   const lowestPrice = sanitizedProduct.competitors.reduce((min, c) => c.currentPrice !== null && c.currentPrice < min ? c.currentPrice : min, Infinity);
   const highestPrice = sanitizedProduct.competitors.reduce((max, c) => c.currentPrice !== null && c.currentPrice > max ? c.currentPrice : max, -Infinity);
   const recommendedPrice = sanitizedProduct.strategies[0]?.recommendedPrice;
-
+  
   const handleAddCompetitor = addCompetitorAction.bind(null, productId);
   const handleTrackCompetitor = trackCompetitorAction;
   const handleUpdateCost = updateProductCostAction.bind(null, productId);
   
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header Section */}
       <div className="mb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-6">
@@ -118,11 +113,10 @@ export default async function ProductPage({ params }: { params: { productId: str
             </Link>
             <Link href={`/dashboard/products`}>
               <Button variant="ghost">Back to Products</Button>
-            </Link>
+            </Button>
           </div>
         </div>
         
-        {/* Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="border-l-4 border-l-indigo-500 shadow-sm">
             <CardContent className="p-5">
@@ -199,15 +193,13 @@ export default async function ProductPage({ params }: { params: { productId: str
         </div>
       </div>
       
-      {/* Competitors Section - Now using the separate client component */}
       <CompetitorsSection 
         productId={product.id} 
         competitors={sanitizedProduct.competitors} 
-        handleAddCompetitor={handleAddCompetitor} // ⚠️ تم تمرير الدالة
-        handleTrackCompetitor={handleTrackCompetitor} // ⚠️ تم تمرير الدالة
+        handleAddCompetitor={handleAddCompetitor}
+        handleTrackCompetitor={handleTrackCompetitor}
       />
       
-      {/* Strategy Section */}
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-xl">Pricing Strategy</CardTitle>
