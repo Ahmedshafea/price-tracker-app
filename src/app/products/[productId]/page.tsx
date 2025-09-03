@@ -11,7 +11,6 @@ import CompetitorsSection from "./CompetitorsSection";
 import StrategyForm from "./StrategyForm";
 
 function CostUpdateForm({ productId, initialCost }: { productId: string; initialCost: number | null }) {
-  // ⚠️ Removed unused `handleUpdateCost` and `use server` since the parent is already a server component
   async function handleUpdateCost(formData: FormData) {
     "use server";
     await updateProductCostAction(productId, formData);

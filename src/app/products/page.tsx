@@ -1,6 +1,6 @@
 // في ملف src/app/products/page.tsx
 import { db } from "@/lib/db";
-import DashboardClient from "./productsClient";
+import ProductsClient from "./productsClient";
 
 export default async function ProductsPage() {
   const userId = "example_user_id";
@@ -39,5 +39,5 @@ export default async function ProductsPage() {
     };
   });
 
-  return <DashboardClient products={sanitizedProducts} />;
+  return <ProductsClient products={sanitizedProducts} />;
 }
